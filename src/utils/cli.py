@@ -8,7 +8,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
-from .logger import setup_logger
+from .logger import setup_logger, configure_logger
 
 
 def create_unique_log_file() -> str:
@@ -166,7 +166,9 @@ def setup_logging(args) -> object:
     """Setup logging for the session."""
     log_file = create_unique_log_file()
     log_level = "DEBUG" if args.verbose else "INFO"
-    logger = setup_logger("TechAuthor-CLI", level=log_level, log_file=log_file)
+    
+    # Configure the global logger that will be used by all components
+    logger = configure_logger(level=log_level, log_file=log_file)
     
     logger.info("Starting TechAuthor Research Analysis System")
     logger.info(f"Log file: {log_file}")

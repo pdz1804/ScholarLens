@@ -42,16 +42,16 @@ class AnalysisAgent(BaseAgent):
         
         # Analysis methods mapping
         self.analysis_methods = {
-            QueryType.AUTHOR_EXPERTISE: self._analyze_author_expertise,
-            QueryType.TECHNOLOGY_TRENDS: self._analyze_technology_trends,
-            QueryType.AUTHOR_COLLABORATION: self._analyze_author_collaboration,
+            QueryType.AUTHOR_EXPERTISE: self._analyze_author_expertise,         # checked
+            QueryType.TECHNOLOGY_TRENDS: self._analyze_technology_trends,       # checked
+            QueryType.AUTHOR_COLLABORATION: self._analyze_author_collaboration, # checked
             QueryType.DOMAIN_EVOLUTION: self._analyze_domain_evolution,
             QueryType.CROSS_DOMAIN_ANALYSIS: self._analyze_cross_domain,
             QueryType.PAPER_IMPACT: self._analyze_paper_impact,
             QueryType.AUTHOR_PRODUCTIVITY: self._analyze_author_productivity,
-            QueryType.AUTHOR_STATS: self._analyze_author_stats,
-            QueryType.PAPER_SEARCH: self._analyze_paper_search,
-            QueryType.UNCLASSIFIED: self._handle_unclassified
+            QueryType.AUTHOR_STATS: self._analyze_author_stats,                 # checked
+            QueryType.PAPER_SEARCH: self._analyze_paper_search,                 # checked
+            QueryType.UNCLASSIFIED: self._handle_unclassified                   # checked
         }
     
     async def _initialize_impl(self) -> None:
@@ -89,10 +89,10 @@ class AnalysisAgent(BaseAgent):
         Returns:
             Analysis result
         """
-        self.logger.info(f"Starting analysis of {len(retrieval_results)} papers")
+        self._log_info(f"Starting analysis of {len(retrieval_results)} papers")
         
         if not retrieval_results:
-            self.logger.warning("No papers retrieved for analysis")
+            self._log_warning("No papers retrieved for analysis")
             return AnalysisResult(
                 query=query,
                 retrieved_papers=retrieval_results,
@@ -103,9 +103,9 @@ class AnalysisAgent(BaseAgent):
             )
         
         # Log paper details
-        self.logger.info("Papers to analyze:")
+        self._log_info("Papers to analyze:")
         for i, result in enumerate(retrieval_results[:5], 1):
-            self.logger.info(f"  {i}. {result.paper.title[:50]}... (Score: {result.score:.3f})")
+            self._log_info(f"  {i}. {result.paper.title[:50]}... (Score: {result.score:.3f})")
         
         # Determine analysis method based on query type
         analysis_method = self.analysis_methods.get(
@@ -113,17 +113,17 @@ class AnalysisAgent(BaseAgent):
             self._analyze_general
         )
         
-        self.logger.info(f"Using analysis method for: {query.query_type.value if query.query_type else 'general'}")
+        self._log_info(f"Using analysis method for: {query.query_type.value if query.query_type else 'general'}")
         
         # Perform analysis
         try:
-            self.logger.info("Executing analysis method...")
+            self._log_info("Executing analysis method...")
             analysis_results, confidence, reasoning = await analysis_method(
                 query, retrieval_results
             )
             
-            self.logger.info(f"Analysis completed with confidence: {confidence:.3f}")
-            self.logger.info(f"Analysis reasoning: {reasoning[:100]}...")
+            self._log_info(f"Analysis completed with confidence: {confidence:.3f}")
+            self._log_info(f"Analysis reasoning: {reasoning}...")
             
             return AnalysisResult(
                 query=query,
@@ -135,7 +135,7 @@ class AnalysisAgent(BaseAgent):
             )
             
         except Exception as e:
-            self.logger.error(f"Analysis failed: {e}")
+            self._log_error(f"Analysis failed: {e}")
             return AnalysisResult(
                 query=query,
                 retrieved_papers=retrieval_results,
@@ -144,7 +144,8 @@ class AnalysisAgent(BaseAgent):
                 confidence=0.0,
                 reasoning=f"Analysis failed: {e}"
             )
-    
+
+    # === Author Expertise Analysis ===
     async def _analyze_author_expertise(
         self,
         query: Query,
@@ -217,6 +218,7 @@ class AnalysisAgent(BaseAgent):
         top_authors = all_scored_authors[:top_k]
         
         # Calculate confidence based on data quality
+        # Need to check these calculations
         total_papers = len(retrieval_results)
         unique_authors = len(author_counts)
         confidence = min(0.9, 0.5 + (total_papers / 100) + (unique_authors / 50))
@@ -236,7 +238,10 @@ class AnalysisAgent(BaseAgent):
         )
         
         return results, confidence, reasoning
-    
+
+    # === End Author Expertise Analysis ===
+
+    # === Technology Trends Analysis ===
     async def _analyze_technology_trends(
         self,
         query: Query,
@@ -267,27 +272,37 @@ class AnalysisAgent(BaseAgent):
         years = sorted(yearly_data.keys())
         trends = []
         
-        # Analyze top subjects across years
+        # Analyze top 20 most common subjects across years
         top_subjects = [subject for subject, _ in all_subjects.most_common(20)]
         
         if len(years) > 1:
-            # Multi-year trend analysis
+            # Multi-year trend analysis: Analyze technology trends across multiple years
+            # This section performs temporal analysis to identify trending technologies
             for subject in top_subjects:
+                # Extract paper counts for this subject across all years
+                # Creates a time series of paper counts: [count_year1, count_year2, ...]
                 year_counts = [yearly_data[year].get(subject, 0) for year in years]
                 
                 if len(year_counts) > 1:
-                    # Calculate trend (simple linear regression slope)
-                    x = np.array(range(len(years)))
-                    y = np.array(year_counts)
+                    # Calculate trend using simple linear regression slope
+                    # This determines if the subject is gaining or losing popularity over time
+                    x = np.array(range(len(years)))  # X-axis: time indices (0, 1, 2, ...)
+                    y = np.array(year_counts)        # Y-axis: paper counts per year
                     
+                    # Only analyze subjects that have at least some papers published
                     if np.sum(y) > 0:  # Only if there are papers
+                        # Calculate linear regression slope (trend direction and strength)
+                        # slope > 0: increasing trend, slope < 0: decreasing trend
                         slope = np.polyfit(x, y, 1)[0] if len(x) > 1 else 0
                         
+                        # Store comprehensive trend information for each technology/subject
                         trends.append({
-                            "technology": subject,
-                            "trend_slope": round(slope, 3),
-                            "total_papers": int(np.sum(y)),
-                            "recent_papers": int(year_counts[-1]) if year_counts else 0,
+                            "technology": subject,                    # Subject/technology name
+                            "trend_slope": round(slope, 3),          # Numerical trend strength
+                            "total_papers": int(np.sum(y)),          # Total papers across all years
+                            "recent_papers": int(year_counts[-1]) if year_counts else 0,  # Papers in most recent year
+                            # Categorize trend direction based on slope thresholds
+                            # > 0.1: increasing, < -0.1: decreasing, otherwise: stable
                             "trend_direction": "increasing" if slope > 0.1 else "decreasing" if slope < -0.1 else "stable"
                         })
         else:
@@ -342,6 +357,7 @@ class AnalysisAgent(BaseAgent):
         }
         
         # Adjust confidence based on available years
+        # Should recheck the calculations later
         base_confidence = 0.4 + (len(retrieval_results) / 200)
         if len(years) > 1:
             confidence = min(0.9, base_confidence + (len(years) / 20))
@@ -360,14 +376,14 @@ class AnalysisAgent(BaseAgent):
         
         # Create visualization
         try:
-            self.logger.info("Creating technology trends visualization...")
+            self._log_info("Creating technology trends visualization...")
             visualization_path = create_technology_trends_visualization(
                 results, query.text
             )
             results["visualization_path"] = visualization_path
-            self.logger.info(f"Visualization saved to: {visualization_path}")
+            self._log_info(f"Visualization saved to: {visualization_path}")
         except Exception as e:
-            self.logger.warning(f"Failed to create visualization: {e}")
+            self._log_warning(f"Failed to create visualization: {e}")
             results["visualization_error"] = str(e)
         
         if len(years) > 1:
@@ -387,7 +403,10 @@ class AnalysisAgent(BaseAgent):
             )
         
         return results, confidence, reasoning
-    
+
+    # === End Technology Trends Analysis ===
+
+    # === Author Collaboration Analysis ===
     async def _analyze_author_collaboration(
         self,
         query: Query,
@@ -402,44 +421,44 @@ class AnalysisAgent(BaseAgent):
         Returns:
             Tuple of (results, confidence, reasoning)
         """
-        self.logger.info("Starting author collaboration analysis")
+        self._log_info("Starting author collaboration analysis")
         
         # Get focal author from query parameters (set by classifier)
         focal_author = query.parameters.get('author')
-        self.logger.info(f"Focal author from parameters: '{focal_author}'")
+        self._log_info(f"Focal author from parameters: '{focal_author}'")
         
         if focal_author:
-            self.logger.info(f"Found focal author '{focal_author}' in query parameters")
+            self._log_info(f"Found focal author '{focal_author}' in query parameters")
             # Try to get data from author database
             try:
                 author_data = await self._get_author_from_database(focal_author)
                 if author_data:
-                    self.logger.info(f"Found author data for '{focal_author}' with {author_data.get('num_collaborators', 0)} collaborators")
+                    self._log_info(f"Found author data for '{focal_author}' with {author_data.get('num_collaborators', 0)} collaborators")
                     return await self._analyze_specific_author_collaboration(
-                        focal_author, author_data, retrieval_results
+                        focal_author, author_data
                     )
                 else:
-                    self.logger.info(f"No author data found for '{focal_author}' in database")
+                    self._log_info(f"No author data found for '{focal_author}' in database")
             except Exception as e:
-                self.logger.error(f"ERROR in _get_author_from_database: {e}")
+                self._log_error(f"ERROR in _get_author_from_database: {e}")
         
         # Fallback: try to extract author from query text if not in parameters
         if not focal_author:
             focal_author = await self._extract_author_name_from_query(query.text)
-            self.logger.info(f"Extracted from query text: '{focal_author}'")
+            self._log_info(f"Fallback 1 - Extracted from query text: '{focal_author}'")
         
         # Fallback: try to find author in retrieved papers
         if not focal_author:
             focal_author = self._find_author_in_papers(query.text.lower(), retrieval_results)
-            self.logger.info(f"Found in papers: '{focal_author}'")
+            self._log_info(f"Fallback 2 - Found in papers: '{focal_author}'")
         
         # If still no focal author found, analyze general collaboration patterns
         if not focal_author:
-            self.logger.info("No focal author found, proceeding with general collaboration analysis")
-            return await self._analyze_general_collaboration(query, retrieval_results)
+            self._log_info("No focal author found, proceeding with general collaboration analysis")
+            return await self._analyze_general_collaboration(retrieval_results)
         
         # Fallback: Analyze specific author's collaborations from retrieved papers
-        self.logger.info(f"Analyzing collaboration from papers for: '{focal_author}'")
+        self._log_info(f"Analyzing collaboration from papers for: '{focal_author}'")
         return await self._analyze_author_from_papers(focal_author, retrieval_results)
     
     async def _analyze_author_from_papers(
@@ -472,10 +491,8 @@ class AnalysisAgent(BaseAgent):
         # Calculate network metrics
         try:
             centrality = nx.degree_centrality(G)
-            betweenness = nx.betweenness_centrality(G)
         except:
             centrality = {focal_author: 1.0}
-            betweenness = {focal_author: 0.0}
         
         # Prepare results
         top_collaborators = []
@@ -509,7 +526,6 @@ class AnalysisAgent(BaseAgent):
     
     async def _analyze_general_collaboration(
         self,
-        query: Query,
         retrieval_results: List[RetrievalResult]
     ) -> Tuple[Dict[str, Any], float, str]:
         """Analyze general collaboration patterns when no focal author is specified."""
@@ -537,10 +553,6 @@ class AnalysisAgent(BaseAgent):
         # Calculate network metrics
         if G.number_of_nodes() > 0:
             degree_centrality = nx.degree_centrality(G)
-            try:
-                betweenness_centrality = nx.betweenness_centrality(G)
-            except:
-                betweenness_centrality = {}
             
             # Find most collaborative authors
             most_collaborative = sorted(
@@ -609,7 +621,7 @@ class AnalysisAgent(BaseAgent):
                 return author_stats[best_match]
                 
         except Exception as e:
-            self.logger.warning(f"Error loading author database: {e}")
+            self._log_warning(f"Error loading author database: {e}")
             
         return None
     
@@ -624,8 +636,7 @@ class AnalysisAgent(BaseAgent):
     async def _analyze_specific_author_collaboration(
         self,
         focal_author: str,
-        author_data: Dict[str, Any],
-        retrieval_results: List[RetrievalResult]
+        author_data: Dict[str, Any]
     ) -> Tuple[Dict[str, Any], float, str]:
         """Analyze collaboration for a specific author using database data and full dataset."""
         
@@ -638,17 +649,17 @@ class AnalysisAgent(BaseAgent):
         # Calculate EXACT collaboration counts from full dataset using collaboration graph
         exact_collaborations = {}
         if self.data_manager and hasattr(self.data_manager, 'papers') and self.data_manager.papers:
-            self.logger.info(f"Getting collaboration data for {focal_author} using graph-based analysis")
+            self._log_info(f"Getting collaboration data for {focal_author} using graph-based analysis")
             
             # Use graph-based collaboration calculation (builds graph once, caches for future use)
             exact_collaborations = self._get_collaborations_from_graph(focal_author)
             
             if exact_collaborations:
-                self.logger.info(f"Graph-based collaboration analysis successful for {focal_author}: {len(exact_collaborations)} collaborators found")
+                self._log_info(f"Graph-based collaboration analysis successful for {focal_author}: {len(exact_collaborations)} collaborators found")
             else:
-                self.logger.info(f"No collaborations found for {focal_author} in dataset")
+                self._log_info(f"No collaborations found for {focal_author} in dataset")
         else:
-            self.logger.info("Data manager not available, using estimated collaboration counts")
+            self._log_info("Data manager not available, using estimated collaboration counts")
         
         # Prepare top collaborators with EXACT data from graph analysis, properly sorted
         top_collaborators = []
@@ -688,10 +699,10 @@ class AnalysisAgent(BaseAgent):
         # Calculate collaboration statistics using exact data when available
         if exact_collaborations:
             actual_collaborators_count = len(exact_collaborations)
-            self.logger.info(f"Using exact collaboration count: {actual_collaborators_count} collaborators found")
+            self._log_info(f"Using exact collaboration count: {actual_collaborators_count} collaborators found")
         else:
             actual_collaborators_count = num_collaborators
-            self.logger.info(f"Using database collaboration count: {actual_collaborators_count} collaborators")
+            self._log_info(f"Using database collaboration count: {actual_collaborators_count} collaborators")
         
         avg_collaborators_per_paper = round(actual_collaborators_count / max(total_papers, 1), 2)
         collaboration_intensity = "High" if actual_collaborators_count > 50 else "Medium" if actual_collaborators_count > 20 else "Low"
@@ -721,6 +732,8 @@ class AnalysisAgent(BaseAgent):
             }
         }
         
+        # Confidence based on actual collaborations found
+        # Need to recheck this calculation
         confidence = min(0.95, 0.8 + (min(actual_collaborators_count, 50) / 100))
         
         data_source = "exact dataset analysis" if exact_collaborations else "author database estimates"
@@ -731,9 +744,6 @@ class AnalysisAgent(BaseAgent):
         )
         
         return results, confidence, reasoning
-    
-    # NOTE: Old _calculate_exact_collaborations method removed - now using graph-based approach
-    # All collaboration calculations are handled by _get_collaborations_from_graph method
     
     def _extract_authors_from_paper(self, paper) -> List[str]:
         """Extract authors from different paper data structures."""
@@ -775,34 +785,9 @@ class AnalysisAgent(BaseAgent):
                     return [author.strip() for author in re.split(r'[,;]', authors) if author.strip()]
                     
         except Exception as e:
-            self.logger.warning(f"Error extracting authors from paper: {e}")
+            self._log_warning(f"Error extracting authors from paper: {e}")
         
         return []
-    
-    def _extract_paper_id(self, paper, index: int) -> str:
-        """Extract paper ID from different data structures."""
-        try:
-            # Handle Paper model objects
-            if hasattr(paper, 'paper_id'):
-                return str(paper.paper_id)
-            
-            # Handle dictionary objects
-            if isinstance(paper, dict):
-                for field in ['paper_id', 'id', 'arxiv_id', 'doi']:
-                    if field in paper and paper[field]:
-                        return str(paper[field])
-            
-            # Handle pandas Series/DataFrame rows
-            if hasattr(paper, 'get'):
-                for field in ['paper_id', 'id', 'arxiv_id', 'doi']:
-                    value = paper.get(field)
-                    if value:
-                        return str(value)
-        except Exception:
-            pass
-        
-        # Fallback to index-based ID
-        return f"paper_{index}"
     
     def _authors_match(self, author1: str, author2: str) -> bool:
         """Check if two author names refer to the same person with fuzzy matching."""
@@ -837,21 +822,22 @@ class AnalysisAgent(BaseAgent):
         
         This method builds the ENTIRE collaboration network once and caches it.
         Future collaboration queries can then use graph algorithms for faster analysis.
+        We build and store the graph at `self._collaboration_graph`
         
         Returns:
             NetworkX graph with collaboration edges, or None if data unavailable
         """
         if not self.data_manager or not hasattr(self.data_manager, 'papers') or not self.data_manager.papers:
-            self.logger.warning("Cannot build collaboration graph: no dataset available")
+            self._log_warning("Cannot build collaboration graph: no dataset available (either data manager or papers is None)")
             return None
         
         # Check if we need to rebuild the graph
         current_hash = hash(str(len(self.data_manager.papers)))  # Simple hash based on dataset size
         if self._collaboration_graph is not None and self._last_dataset_hash == current_hash:
-            self.logger.info("Using cached collaboration graph")
+            self._log_info("Using cached collaboration graph")
             return self._collaboration_graph
         
-        self.logger.info(f"Building collaboration graph from {len(self.data_manager.papers)} papers...")
+        self._log_info(f"Building collaboration graph from {len(self.data_manager.papers)} papers...")
         
         # Create graph
         G = nx.Graph()
@@ -881,18 +867,21 @@ class AnalysisAgent(BaseAgent):
                                 G.add_edge(norm_author1, norm_author2, weight=1)
                                 
             except Exception as e:
-                self.logger.warning(f"Error processing paper {i} for collaboration graph: {e}")
+                self._log_warning(f"Error processing paper {i} for collaboration graph: {e}")
                 continue
         
         # Cache the graph
         self._collaboration_graph = G
         self._last_dataset_hash = current_hash
         
-        self.logger.info(f"Collaboration graph built successfully: {G.number_of_nodes()} authors, "
+        self._log_info(f"Collaboration graph built successfully: {G.number_of_nodes()} authors, "
                         f"{G.number_of_edges()} collaboration edges from {paper_count} multi-author papers "
                         f"(processed {processed_papers} total papers)")
         
         return G
+    
+    # NOTE: Old _calculate_exact_collaborations method removed - now using graph-based approach
+    # All collaboration calculations are handled by _get_collaborations_from_graph method
     
     def _get_collaborations_from_graph(self, focal_author: str) -> Dict[str, Dict[str, int]]:
         """Get collaboration data for an author from the prebuilt graph with caching.
@@ -906,13 +895,13 @@ class AnalysisAgent(BaseAgent):
         # Check cache first
         cache_key = focal_author.lower().strip()
         if cache_key in self._collaboration_cache:
-            self.logger.info(f"Using cached collaboration data for {focal_author}")
+            self._log_info(f"Using cached collaboration data for {focal_author}")
             return self._collaboration_cache[cache_key]
         
         # Build/get the collaboration graph
         graph = self._build_collaboration_graph()
         if not graph:
-            self.logger.warning("Cannot get collaborations: collaboration graph unavailable")
+            self._log_warning("Cannot get collaborations: collaboration graph unavailable")
             return {}
         
         # Normalize focal author name for graph lookup
@@ -929,9 +918,9 @@ class AnalysisAgent(BaseAgent):
             
             if best_match:
                 norm_focal = best_match
-                self.logger.info(f"Fuzzy matched '{focal_author}' to '{best_match}' in collaboration graph")
+                self._log_info(f"Fuzzy matched '{focal_author}' to '{best_match}' in collaboration graph")
             else:
-                self.logger.info(f"Author '{focal_author}' not found in collaboration graph")
+                self._log_info(f"Author '{focal_author}' not found in collaboration graph")
                 # Cache the empty result to avoid repeated searches
                 self._collaboration_cache[cache_key] = {}
                 return {}
@@ -948,9 +937,12 @@ class AnalysisAgent(BaseAgent):
         # Cache the results for future queries
         self._collaboration_cache[cache_key] = collaborations
         
-        self.logger.info(f"Graph-based collaboration lookup for '{focal_author}': {len(collaborations)} collaborators found")
+        self._log_info(f"Graph-based collaboration lookup for '{focal_author}': {len(collaborations)} collaborators found")
         return collaborations
 
+    # === End Author Collaboration Analysis ===
+
+    # === Domain Evolution Analysis ===
     async def _analyze_domain_evolution(
         self,
         query: Query,
@@ -969,24 +961,24 @@ class AnalysisAgent(BaseAgent):
         Returns:
             Tuple of (results, confidence, reasoning)
         """
-        self.logger.info(f"Starting domain evolution analysis for {len(retrieval_results)} papers")
+        self._log_info(f"Starting domain evolution analysis for {len(retrieval_results)} papers")
         
         # Extract domain from query
         domain = query.parameters.get("domain", "Unknown Domain")
         time_range = query.parameters.get("time_range", "")
         
         # Group papers by time periods for evolution analysis
-        time_periods = self._create_time_periods(retrieval_results)
-        self.logger.info(f"Created {len(time_periods)} time periods for analysis")
+        time_periods = self._create_time_periods(retrieval_results) # Output: Dict[str, List[RetrievalResult]]
+        self._log_info(f"Created {len(time_periods)} time periods for analysis")
         
         # Analyze evolution timeline
         evolution_timeline = await self._analyze_evolution_timeline(
-            retrieval_results, time_periods, domain
+            time_periods, domain
         )
         
         # Analyze conceptual evolution
         conceptual_evolution = await self._analyze_conceptual_evolution(
-            retrieval_results, time_periods, domain
+            time_periods, domain
         )
         
         # Calculate confidence based on data quality
@@ -1022,9 +1014,11 @@ class AnalysisAgent(BaseAgent):
             f"Used semantic analysis to extract evolution patterns and key transition points."
         )
         
-        self.logger.info(f"Domain evolution analysis completed with confidence {confidence:.2f}")
+        self._log_info(f"Domain evolution analysis completed with confidence {confidence:.2f}")
         
         return results, confidence, reasoning
+    
+    # === End Domain Evolution Analysis === 
     
     async def _analyze_cross_domain(
         self,
@@ -1032,37 +1026,92 @@ class AnalysisAgent(BaseAgent):
         retrieval_results: List[RetrievalResult]
     ) -> Tuple[Dict[str, Any], float, str]:
         """Analyze authors working across multiple domains."""
+        self._log_info(f"Starting cross-domain analysis on {len(retrieval_results)} retrieved papers")
+        
         author_domains = defaultdict(set)
         author_papers = defaultdict(list)
+        domain_stats = defaultdict(int)
         
-        for result in retrieval_results:
+        self._log_info("Extracting author-domain mappings from papers...")
+        for idx, result in enumerate(retrieval_results):
             paper = result.paper
+            self._log_debug(f"Processing paper {idx+1}/{len(retrieval_results)}: {paper.title[:60]}...")
+            
             for author in paper.authors:
-                author_domains[author].add(paper.domain)
-                author_domains[author].update(paper.subjects)
+                # Add paper domain
+                if paper.domain:
+                    author_domains[author].add(paper.domain)
+                    domain_stats[paper.domain] += 1
+                
+                # Add paper subjects
+                if paper.subjects:
+                    author_domains[author].update(paper.subjects)
+                    for subject in paper.subjects:
+                        domain_stats[subject] += 1
+                        
                 author_papers[author].append(paper.paper_id)
         
+        self._log_info(f"Extracted domain mappings for {len(author_domains)} unique authors")
+        self._log_info(f"Found {len(domain_stats)} unique domains/subjects across all papers")
+        
+        # Log top domains by frequency
+        sorted_domains = sorted(domain_stats.items(), key=lambda x: x[1], reverse=True)[:10]
+        self._log_info("Top 10 most frequent domains:")
+        for domain, count in sorted_domains:
+            self._log_info(f"  - {domain}: {count} papers")
+        
         # Find cross-domain authors
+        self._log_info("Identifying interdisciplinary authors...")
         cross_domain_authors = []
+        single_domain_count = 0
+        
         for author, domains in author_domains.items():
             if len(domains) > 1:  # Works in multiple domains
+                interdisciplinary_score = len(domains) * len(author_papers[author])
                 cross_domain_authors.append({
                     "author": author,
                     "domain_count": len(domains),
                     "domains": list(domains),
                     "paper_count": len(author_papers[author]),
-                    "interdisciplinary_score": len(domains) * len(author_papers[author])
+                    "interdisciplinary_score": interdisciplinary_score
                 })
+            else:
+                single_domain_count += 1
+        
+        self._log_info(f"Found {len(cross_domain_authors)} interdisciplinary authors (working in multiple domains)")
+        self._log_info(f"Found {single_domain_count} single-domain authors")
         
         # Sort by interdisciplinary score
         cross_domain_authors.sort(key=lambda x: x["interdisciplinary_score"], reverse=True)
         
+        # Log top interdisciplinary authors
+        self._log_info("Top 10 interdisciplinary authors:")
+        for idx, author_info in enumerate(cross_domain_authors[:10]):
+            self._log_info(f"  {idx+1}. {author_info['author']}")
+            self._log_info(f"     - Domains: {author_info['domain_count']}, Papers: {author_info['paper_count']}")
+            self._log_info(f"     - Score: {author_info['interdisciplinary_score']}")
+            self._log_info(f"     - Fields: {', '.join(author_info['domains'][:3])}{'...' if len(author_info['domains']) > 3 else ''}")
+        
+        # Calculate domain coverage statistics
+        domain_distribution = defaultdict(int)
+        for author_info in cross_domain_authors:
+            domain_distribution[author_info['domain_count']] += 1
+        
+        self._log_info("Domain coverage distribution among interdisciplinary authors:")
+        for domain_count in sorted(domain_distribution.keys()):
+            authors_count = domain_distribution[domain_count]
+            self._log_info(f"  - {domain_count} domains: {authors_count} authors")
+        
         confidence = min(0.8, 0.5 + (len(cross_domain_authors) / 50))
+        self._log_info(f"Analysis confidence calculated: {confidence:.3f}")
         
         results = {
             "cross_domain_authors": cross_domain_authors[:15],
             "total_authors_analyzed": len(author_domains),
             "interdisciplinary_authors": len(cross_domain_authors),
+            "single_domain_authors": single_domain_count,
+            "domain_distribution": dict(domain_distribution),
+            "top_domains": sorted_domains[:10],
             "average_domains_per_author": round(
                 sum(len(domains) for domains in author_domains.values()) / len(author_domains), 2
             ) if author_domains else 0
@@ -1070,9 +1119,12 @@ class AnalysisAgent(BaseAgent):
         
         reasoning = (
             f"Analyzed {len(author_domains)} authors to identify those working across "
-            f"multiple domains. Found {len(cross_domain_authors)} interdisciplinary researchers."
+            f"multiple domains. Found {len(cross_domain_authors)} interdisciplinary researchers. "
+            f"Top interdisciplinary researcher: {cross_domain_authors[0]['author'] if cross_domain_authors else 'None'} "
+            f"with {cross_domain_authors[0]['domain_count'] if cross_domain_authors else 0} domains."
         )
         
+        self._log_info(f"Cross-domain analysis completed successfully")
         return results, confidence, reasoning
     
     async def _analyze_paper_impact(
@@ -1212,6 +1264,8 @@ class AnalysisAgent(BaseAgent):
         
         return results, confidence, reasoning
 
+    # === Author Stats Analysis 
+    # NOTE: calculation for the confidence score should be more proficient (E.g: Using LLMs)
     async def _analyze_author_stats(
         self,
         query: Query,
@@ -1277,6 +1331,9 @@ class AnalysisAgent(BaseAgent):
                 "author_name": author_name
             }, 0.1, f"Error accessing author statistics: {str(e)}"
 
+    # === End Author Stats Analysis ===
+
+    # === Paper Search Analysis ===
     async def _analyze_paper_search(
         self,
         query: Query,
@@ -1294,7 +1351,7 @@ class AnalysisAgent(BaseAgent):
                 "suggestion": "Please specify a paper title, technology name, or paper ID to search for"
             }, 0.1, "No search term found in query"
         
-        self.logger.info(f"Searching for papers matching: '{search_term}'")
+        self._log_info(f"Searching for papers matching: '{search_term}'")
         
         # First, try to find exact paper ID match in data manager if available
         if hasattr(self, 'data_manager') and self.data_manager and hasattr(self.data_manager, 'papers'):
@@ -1305,8 +1362,8 @@ class AnalysisAgent(BaseAgent):
                     break
             
             if exact_paper_match:
-                self.logger.info(f"Found exact paper match in data manager: {exact_paper_match.title}")
-                return {
+                self._log_info(f"Found exact paper match in data manager: {exact_paper_match.title}")
+                result = {
                     "search_results": [{
                         "paper_id": exact_paper_match.paper_id,
                         "title": exact_paper_match.title,
@@ -1319,8 +1376,11 @@ class AnalysisAgent(BaseAgent):
                     }],
                     "total_matches": 1,
                     "search_term": search_term
-                }, 1.0, f"Found exact paper match for ID: {search_term}"
-        
+                }
+                confidence = 1.0
+                reasoning = f"Found exact paper match for ID: {search_term}"
+                return result, confidence, reasoning
+
         # First, try exact paper ID match across all papers
         exact_match = None
         for result in retrieval_results:
@@ -1347,10 +1407,12 @@ class AnalysisAgent(BaseAgent):
                 paper = result.paper
                 title_match = search_term.lower() in paper.title.lower()
                 abstract_match = search_term.lower() in paper.abstract.lower()
+                
                 # Also check paper_id for arXiv IDs and other identifiers
                 id_match = search_term.lower() in paper.paper_id.lower()
                 
                 if title_match or abstract_match or id_match:
+                    # NOTE: those score should later be checked for correctness
                     match_score = result.score
                     if title_match:
                         match_score += 0.3  # Boost for title matches
@@ -1395,6 +1457,9 @@ class AnalysisAgent(BaseAgent):
         
         return results, confidence, reasoning
 
+    # === End Paper Search Analysis ===
+
+    # === Unclassified Queries Handling ===
     async def _handle_unclassified(
         self,
         query: Query,
@@ -1417,6 +1482,9 @@ class AnalysisAgent(BaseAgent):
         
         return results, confidence, reasoning
 
+    # === End Unclassified Queries Handling ===
+
+    # === Domain Evolution Helper ===
     def _create_time_periods(self, retrieval_results: List[RetrievalResult]) -> Dict[str, List[RetrievalResult]]:
         """Create time periods for domain evolution analysis."""
         if not retrieval_results:
@@ -1427,7 +1495,7 @@ class AnalysisAgent(BaseAgent):
         min_year, max_year = min(years), max(years)
         year_span = max_year - min_year + 1
         
-        self.logger.info(f"Analyzing papers from {min_year} to {max_year} (span: {year_span} years)")
+        self._log_info(f"Analyzing papers from {min_year} to {max_year} (span: {year_span} years)")
         
         periods = {}
         
@@ -1463,15 +1531,14 @@ class AnalysisAgent(BaseAgent):
         # Sort periods chronologically
         sorted_periods = {k: periods[k] for k in sorted(periods.keys())}
         
-        self.logger.info(f"Created periods: {list(sorted_periods.keys())}")
+        self._log_info(f"Created periods: {list(sorted_periods.keys())}")
         for period, papers in sorted_periods.items():
-            self.logger.info(f"  {period}: {len(papers)} papers")
+            self._log_info(f"  {period}: {len(papers)} papers")
             
         return sorted_periods
     
     async def _analyze_evolution_timeline(
-        self, 
-        retrieval_results: List[RetrievalResult], 
+        self,  
         time_periods: Dict[str, List[RetrievalResult]],
         domain: str
     ) -> Dict[str, Any]:
@@ -1479,7 +1546,7 @@ class AnalysisAgent(BaseAgent):
         timeline_data = {}
         
         for period, papers in time_periods.items():
-            self.logger.info(f"Analyzing methodologies for period {period} with {len(papers)} papers")
+            self._log_info(f"Analyzing methodologies for period {period} with {len(papers)} papers")
             
             # Extract methodologies and approaches using LLM-based extraction
             methodologies = await self.extraction_service.extract_methodologies_from_papers(papers, domain)
@@ -1500,7 +1567,7 @@ class AnalysisAgent(BaseAgent):
         # Identify transitions and shifts
         transitions = self._identify_methodology_transitions(timeline_data)
         
-        self.logger.info(f"Analyzed evolution timeline with {len(transitions)} major transitions")
+        self._log_info(f"Analyzed evolution timeline with {len(transitions)} major transitions")
         
         return {
             "periods": timeline_data,
@@ -1510,7 +1577,6 @@ class AnalysisAgent(BaseAgent):
     
     async def _analyze_conceptual_evolution(
         self,
-        retrieval_results: List[RetrievalResult], 
         time_periods: Dict[str, List[RetrievalResult]],
         domain: str
     ) -> Dict[str, Any]:
@@ -1518,7 +1584,7 @@ class AnalysisAgent(BaseAgent):
         conceptual_data = {}
         
         for period, papers in time_periods.items():
-            self.logger.info(f"Analyzing concepts for period {period} with {len(papers)} papers")
+            self._log_info(f"Analyzing concepts for period {period} with {len(papers)} papers")
             
             # Extract problem statements and solution approaches using LLM
             problems = await self.extraction_service.extract_problems_from_papers(papers, domain)
@@ -1539,7 +1605,7 @@ class AnalysisAgent(BaseAgent):
         # Track conceptual shifts
         conceptual_shifts = self._identify_conceptual_shifts(conceptual_data)
         
-        self.logger.info(f"Analyzed conceptual evolution with {len(conceptual_shifts)} major shifts")
+        self._log_info(f"Analyzed conceptual evolution with {len(conceptual_shifts)} major shifts")
         
         return {
             "periods": conceptual_data,
@@ -1548,241 +1614,7 @@ class AnalysisAgent(BaseAgent):
             "solution_evolution_trajectory": self._trace_solution_evolution(conceptual_data)
         }
     
-    def _extract_methodologies_from_papers(self, papers: List[RetrievalResult]) -> List[str]:
-        """Extract methodology keywords from paper titles and abstracts.
-        
-        Note: This is a fallback method. The main extraction should use 
-        self.extraction_service.extract_methodologies_from_papers() for LLM-based extraction.
-        """
-        self.logger.warning("Using fallback pattern-based methodology extraction")
-        
-        methodology_keywords = [
-            'neural network', 'deep learning', 'machine learning', 'reinforcement learning',
-            'supervised learning', 'unsupervised learning', 'transformer', 'attention mechanism',
-            'convolutional neural network', 'recurrent neural network', 'generative adversarial network',
-            'statistical method', 'probabilistic model', 'bayesian', 'optimization',
-            'rule-based', 'expert system', 'knowledge graph', 'symbolic reasoning',
-            'computer vision', 'natural language processing', 'signal processing',
-            'algorithm', 'heuristic', 'evolutionary algorithm', 'genetic algorithm'
-        ]
-        
-        found_methodologies = []
-        for paper in papers:
-            text = f"{paper.paper.title} {paper.paper.abstract}".lower()
-            for keyword in methodology_keywords:
-                if keyword in text:
-                    found_methodologies.append(keyword)
-        
-        return found_methodologies
-    
-    def _extract_key_concepts_from_papers(self, papers: List[RetrievalResult]) -> List[str]:
-        """Extract key conceptual terms from papers.
-        
-        Note: This is a fallback method. The main extraction should use 
-        self.extraction_service.extract_key_concepts_from_papers() for LLM-based extraction.
-        """
-        self.logger.warning("Using fallback pattern-based concept extraction")
-        
-        concept_keywords = [
-            'accuracy', 'precision', 'recall', 'performance', 'efficiency', 'scalability',
-            'robustness', 'generalization', 'interpretability', 'explainability',
-            'real-time', 'distributed', 'federated', 'privacy', 'security',
-            'multimodal', 'cross-modal', 'transfer learning', 'few-shot learning',
-            'zero-shot learning', 'meta-learning', 'continual learning',
-            'representation learning', 'feature extraction', 'dimensionality reduction'
-        ]
-        
-        found_concepts = []
-        for paper in papers:
-            text = f"{paper.paper.title} {paper.paper.abstract}".lower()
-            for keyword in concept_keywords:
-                if keyword in text:
-                    found_concepts.append(keyword)
-        
-        return found_concepts
-    
-    def _extract_problems_from_papers(self, papers: List[RetrievalResult]) -> List[str]:
-        """Extract problem descriptions from papers.
-        
-        Note: This is a fallback method. The main extraction should use 
-        self.extraction_service.extract_problems_from_papers() for LLM-based extraction.
-        """
-        self.logger.warning("Using fallback pattern-based problem extraction")
-        
-        problem_indicators = [
-            'challenge', 'problem', 'issue', 'difficulty', 'limitation',
-            'bottleneck', 'obstacle', 'inefficiency', 'error', 'failure'
-        ]
-        
-        problems = []
-        for paper in papers:
-            text = f"{paper.paper.title} {paper.paper.abstract}".lower()
-            # Simple extraction based on problem indicators
-            if any(indicator in text for indicator in problem_indicators):
-                problems.append(f"Problem addressed in: {paper.paper.title[:50]}...")
-        
-        return problems
-    
-    def _extract_solutions_from_papers(self, papers: List[RetrievalResult]) -> List[str]:
-        """Extract solution approaches from papers.
-        
-        Note: This is a fallback method. The main extraction should use 
-        self.extraction_service.extract_solutions_from_papers() for LLM-based extraction.
-        """
-        self.logger.warning("Using fallback pattern-based solution extraction")
-        
-        solution_indicators = [
-            'approach', 'method', 'technique', 'algorithm', 'framework',
-            'model', 'system', 'solution', 'propose', 'introduce'
-        ]
-        
-        solutions = []
-        for paper in papers:
-            text = f"{paper.paper.title} {paper.paper.abstract}".lower()
-            # Simple extraction based on solution indicators
-            if any(indicator in text for indicator in solution_indicators):
-                solutions.append(f"Solution from: {paper.paper.title[:50]}...")
-        
-        return solutions
-    
-    def _analyze_problem_complexity(self, problems: List[str]) -> float:
-        """Analyze the complexity of problems (simplified metric)."""
-        if not problems:
-            return 0.0
-        
-        # Simple complexity metric based on problem count and diversity
-        unique_problems = len(set(problems))
-        complexity_score = min(1.0, unique_problems / 10.0)  # Normalize to 0-1
-        return round(complexity_score, 2)
-    
-    def _analyze_solution_sophistication(self, solutions: List[str]) -> float:
-        """Analyze the sophistication of solutions (simplified metric)."""
-        if not solutions:
-            return 0.0
-        
-        # Simple sophistication metric based on solution diversity
-        unique_solutions = len(set(solutions))
-        sophistication_score = min(1.0, unique_solutions / 10.0)  # Normalize to 0-1
-        return round(sophistication_score, 2)
-    
-    def _identify_methodology_transitions(self, timeline_data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Identify major methodology transitions between periods."""
-        transitions = []
-        periods = list(timeline_data.keys())
-        
-        for i in range(len(periods) - 1):
-            current_period = periods[i]
-            next_period = periods[i + 1]
-            
-            current_methods = set(timeline_data[current_period]['dominant_methodologies'])
-            next_methods = set(timeline_data[next_period]['dominant_methodologies'])
-            
-            # Find new methodologies
-            new_methods = next_methods - current_methods
-            disappeared_methods = current_methods - next_methods
-            
-            if new_methods or disappeared_methods:
-                transitions.append({
-                    "from_period": current_period,
-                    "to_period": next_period,
-                    "new_methodologies": list(new_methods),
-                    "disappeared_methodologies": list(disappeared_methods),
-                    "transition_type": "methodology_shift"
-                })
-        
-        return transitions
-    
-    def _identify_evolution_phases(self, timeline_data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Identify distinct evolution phases in the domain."""
-        phases = []
-        periods = list(timeline_data.keys())
-        
-        # Simple phase identification based on methodology diversity changes
-        for i, period in enumerate(periods):
-            diversity = timeline_data[period]['methodology_diversity']
-            phase_name = f"Phase {i+1}"
-            
-            if diversity > 8:
-                phase_type = "High Diversity Period"
-            elif diversity > 4:
-                phase_type = "Moderate Diversity Period" 
-            else:
-                phase_type = "Low Diversity Period"
-            
-            phases.append({
-                "phase_name": phase_name,
-                "period": period,
-                "phase_type": phase_type,
-                "methodology_diversity": diversity,
-                "characteristics": timeline_data[period]['dominant_methodologies'][:3]
-            })
-        
-        return phases
-    
-    def _identify_conceptual_shifts(self, conceptual_data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Identify major conceptual shifts between periods."""
-        shifts = []
-        periods = list(conceptual_data.keys())
-        
-        for i in range(len(periods) - 1):
-            current_period = periods[i]
-            next_period = periods[i + 1]
-            
-            current_problems = set(conceptual_data[current_period]['primary_problems'])
-            next_problems = set(conceptual_data[next_period]['primary_problems'])
-            
-            # Detect problem focus shifts
-            if current_problems != next_problems:
-                shifts.append({
-                    "from_period": current_period,
-                    "to_period": next_period,
-                    "problem_shift": {
-                        "old_focus": list(current_problems)[:2],
-                        "new_focus": list(next_problems)[:2]
-                    },
-                    "shift_type": "problem_focus_change"
-                })
-        
-        return shifts
-    
-    def _trace_problem_evolution(self, conceptual_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Trace how problem formulations evolved over time."""
-        evolution = {
-            "complexity_trend": [],
-            "focus_areas": []
-        }
-        
-        for period, data in conceptual_data.items():
-            evolution["complexity_trend"].append({
-                "period": period,
-                "complexity_score": data['problem_complexity_score']
-            })
-            evolution["focus_areas"].append({
-                "period": period,
-                "primary_problems": data['primary_problems'][:2]
-            })
-        
-        return evolution
-    
-    def _trace_solution_evolution(self, conceptual_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Trace how solution approaches evolved over time."""
-        evolution = {
-            "sophistication_trend": [],
-            "approach_evolution": []
-        }
-        
-        for period, data in conceptual_data.items():
-            evolution["sophistication_trend"].append({
-                "period": period,
-                "sophistication_score": data['solution_sophistication_score']
-            })
-            evolution["approach_evolution"].append({
-                "period": period,
-                "primary_approaches": data['solution_approaches'][:2]
-            })
-        
-        return evolution
-    
+    # NOTE: Later need to recheck the calculations
     def _calculate_domain_evolution_confidence(
         self,
         retrieval_results: List[RetrievalResult],
@@ -1811,7 +1643,246 @@ class AnalysisAgent(BaseAgent):
         
         return round(min(0.95, total_confidence), 2)
 
-    # fix: now using patterns to extract author names
+    def _identify_methodology_transitions(self, timeline_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Identify major methodology transitions between periods."""
+        transitions = []
+        periods = list(timeline_data.keys())
+        
+        for i in range(len(periods) - 1):
+            current_period = periods[i]
+            next_period = periods[i + 1]
+            
+            current_methods = set(timeline_data[current_period]['dominant_methodologies'])
+            next_methods = set(timeline_data[next_period]['dominant_methodologies'])
+            
+            # Find new methodologies
+            new_methods = next_methods - current_methods
+            disappeared_methods = current_methods - next_methods
+            
+            if new_methods or disappeared_methods:
+                transition_significance = "HIGH" if len(new_methods) >= 3 or len(disappeared_methods) >= 3 else "MEDIUM"
+                
+                transitions.append({
+                    "from_period": current_period,
+                    "to_period": next_period,
+                    "new_methodologies": list(new_methods),
+                    "disappeared_methodologies": list(disappeared_methods),
+                    "transition_type": "methodology_shift",
+                    "significance": transition_significance,
+                    "description": f"Transition from {', '.join(list(disappeared_methods)[:2])} to {', '.join(list(new_methods)[:2])}"
+                })
+        
+        return transitions
+    
+    def _identify_evolution_phases(self, timeline_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Identify distinct evolution phases in the domain evolution analysis."""
+        phases = []
+        periods = list(timeline_data.keys())
+        
+        # Create meaningful phase identification based on methodology diversity and patterns
+        for i, period in enumerate(periods):
+            diversity = timeline_data[period]['methodology_diversity']
+            conceptual_novelty = timeline_data[period]['conceptual_novelty']
+            paper_count = timeline_data[period]['paper_count']
+            
+            # Determine phase characteristics
+            if diversity > 8 and conceptual_novelty > 8:
+                phase_type = "Innovation Phase"
+                characteristics = "High methodology and conceptual diversity"
+            elif diversity > 6 or conceptual_novelty > 6:
+                phase_type = "Development Phase"
+                characteristics = "Moderate innovation with focused development"
+            elif diversity < 4 and conceptual_novelty < 4:
+                phase_type = "Consolidation Phase"
+                characteristics = "Low diversity, focus on established approaches"
+            else:
+                phase_type = "Transition Phase"
+                characteristics = "Mixed patterns, transitioning between approaches"
+            
+            phase_name = f"{phase_type} ({period})"
+            
+            phases.append({
+                "phase_name": phase_name,
+                "period": period,
+                "phase_type": phase_type,
+                "characteristics": characteristics,
+                "methodology_diversity": diversity,
+                "conceptual_novelty": conceptual_novelty,
+                "paper_count": paper_count,
+                "dominant_methodologies": timeline_data[period]['dominant_methodologies'][:3],
+                "key_concepts": timeline_data[period]['emerging_concepts'][:3]
+            })
+        
+        return phases
+    
+    def _analyze_problem_complexity(self, problems: List[str]) -> float:
+        """Analyze the complexity of problems (simplified metric)."""
+        if not problems:
+            return 0.0
+        
+        # Simple complexity metric based on problem count and diversity
+        unique_problems = len(set(problems))
+        complexity_score = min(1.0, unique_problems / 10.0)  # Normalize to 0-1
+        return round(complexity_score, 2)
+    
+    def _analyze_solution_sophistication(self, solutions: List[str]) -> float:
+        """Analyze the sophistication of solutions (simplified metric)."""
+        if not solutions:
+            return 0.0
+        
+        # Simple sophistication metric based on solution diversity
+        unique_solutions = len(set(solutions))
+        sophistication_score = min(1.0, unique_solutions / 10.0)  # Normalize to 0-1
+        return round(sophistication_score, 2)
+    
+    def _identify_conceptual_shifts(self, conceptual_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Identify major conceptual shifts between periods."""
+        shifts = []
+        periods = list(conceptual_data.keys())
+        
+        for i in range(len(periods) - 1):
+            current_period = periods[i]
+            next_period = periods[i + 1]
+            
+            current_problems = set(conceptual_data[current_period]['primary_problems'])
+            next_problems = set(conceptual_data[next_period]['primary_problems'])
+            
+            current_solutions = set(conceptual_data[current_period]['solution_approaches'])
+            next_solutions = set(conceptual_data[next_period]['solution_approaches'])
+            
+            # Detect problem focus shifts
+            if current_problems != next_problems or current_solutions != next_solutions:
+                problem_shift_count = len(current_problems.symmetric_difference(next_problems))
+                solution_shift_count = len(current_solutions.symmetric_difference(next_solutions))
+                
+                shift_significance = "HIGH" if problem_shift_count >= 2 or solution_shift_count >= 2 else "MEDIUM"
+                
+                shifts.append({
+                    "from_period": current_period,
+                    "to_period": next_period,
+                    "problem_shift": {
+                        "old_focus": list(current_problems)[:2],
+                        "new_focus": list(next_problems)[:2]
+                    },
+                    "solution_shift": {
+                        "old_approaches": list(current_solutions)[:2],
+                        "new_approaches": list(next_solutions)[:2]
+                    },
+                    "shift_type": "problem_focus_change",
+                    "significance": shift_significance,
+                    "description": f"Focus shifted from {' -> '.join(list(current_problems)[:1])} to {' -> '.join(list(next_problems)[:1])}"
+                })
+        
+        return shifts
+    
+    def _trace_problem_evolution(self, conceptual_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Trace how problem formulations evolved over time."""
+        evolution = {
+            "complexity_trend": [],
+            "focus_areas": [],
+            "evolution_summary": {
+                "trend_direction": "increasing",  # Default value
+                "key_changes": [],
+                "complexity_pattern": "stable"
+            }
+        }
+        
+        complexity_scores = []
+        prev_problems = set()
+        
+        for period, data in conceptual_data.items():
+            complexity_score = data['problem_complexity_score']
+            complexity_scores.append(complexity_score)
+            
+            evolution["complexity_trend"].append({
+                "period": period,
+                "complexity_score": complexity_score
+            })
+            
+            current_problems = set(data['primary_problems'][:2])
+            evolution["focus_areas"].append({
+                "period": period,
+                "primary_problems": data['primary_problems'][:2]
+            })
+            
+            # Track changes from previous period
+            if prev_problems:
+                new_problems = current_problems - prev_problems
+                if new_problems:
+                    evolution["evolution_summary"]["key_changes"].append(f"Period {period}: New focus on {', '.join(list(new_problems)[:1])}")
+            
+            prev_problems = current_problems
+        
+        # Analyze overall trends
+        if len(complexity_scores) > 1:
+            if complexity_scores[-1] > complexity_scores[0]:
+                evolution["evolution_summary"]["trend_direction"] = "increasing complexity"
+                evolution["evolution_summary"]["complexity_pattern"] = "growing"
+            elif complexity_scores[-1] < complexity_scores[0]:
+                evolution["evolution_summary"]["trend_direction"] = "decreasing complexity"
+                evolution["evolution_summary"]["complexity_pattern"] = "simplifying"
+            else:
+                evolution["evolution_summary"]["trend_direction"] = "stable complexity"
+                evolution["evolution_summary"]["complexity_pattern"] = "consistent"
+        
+        return evolution
+    
+    def _trace_solution_evolution(self, conceptual_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Trace how solution approaches evolved over time."""
+        evolution = {
+            "sophistication_trend": [],
+            "approach_evolution": [],
+            "evolution_summary": {
+                "trend_direction": "advancing",  # Default value
+                "key_innovations": [],
+                "sophistication_pattern": "stable"
+            }
+        }
+        
+        sophistication_scores = []
+        prev_solutions = set()
+        
+        for period, data in conceptual_data.items():
+            sophistication_score = data['solution_sophistication_score']
+            sophistication_scores.append(sophistication_score)
+            
+            evolution["sophistication_trend"].append({
+                "period": period,
+                "sophistication_score": sophistication_score
+            })
+            
+            current_solutions = set(data['solution_approaches'][:2])
+            evolution["approach_evolution"].append({
+                "period": period,
+                "primary_approaches": data['solution_approaches'][:2]
+            })
+            
+            # Track innovations from previous period
+            if prev_solutions:
+                new_solutions = current_solutions - prev_solutions
+                if new_solutions:
+                    evolution["evolution_summary"]["key_innovations"].append(f"Period {period}: Introduced {', '.join(list(new_solutions)[:1])}")
+            
+            prev_solutions = current_solutions
+        
+        # Analyze overall trends
+        if len(sophistication_scores) > 1:
+            if sophistication_scores[-1] > sophistication_scores[0]:
+                evolution["evolution_summary"]["trend_direction"] = "increasing sophistication"
+                evolution["evolution_summary"]["sophistication_pattern"] = "advancing"
+            elif sophistication_scores[-1] < sophistication_scores[0]:
+                evolution["evolution_summary"]["trend_direction"] = "decreasing sophistication"
+                evolution["evolution_summary"]["sophistication_pattern"] = "simplifying"
+            else:
+                evolution["evolution_summary"]["trend_direction"] = "stable sophistication"
+                evolution["evolution_summary"]["sophistication_pattern"] = "consistent"
+        
+        return evolution
+
+    # === End Domain Evolution Helper ===
+    
+    # LLM usage - Pattern matching for fallback
+    # Use in: Author Collaboration and Author Stats
     async def _extract_author_name_from_query(self, query_text: str) -> Optional[str]:
         """Extract author name from query text using LLM-based extraction."""
         try:
@@ -1819,11 +1890,13 @@ class AnalysisAgent(BaseAgent):
             if result:
                 return result
         except Exception as e:
-            self.logger.error(f"Failed to extract author name via LLM: {e}")
+            self._log_error(f"Failed to extract author name via LLM: {e}")
         
         # If LLM extraction fails, use the ExtractionService's fallback method
         return self.extraction_service._fallback_author_name_extraction(query_text)
 
+    # LLM usage - Pattern matching for fallback
+    # Use in: Paper Search
     async def _extract_search_term_from_query(self, query_text: str) -> Optional[str]:
         """Extract search term from query text using LLM-based extraction."""
         try:
@@ -1831,11 +1904,12 @@ class AnalysisAgent(BaseAgent):
             if result:
                 return result
         except Exception as e:
-            self.logger.error(f"Failed to extract search term via LLM: {e}")
+            self._log_error(f"Failed to extract search term via LLM: {e}")
         
         # If LLM extraction fails, use the ExtractionService's fallback method
         return self.extraction_service._fallback_search_term_extraction(query_text)
 
+    # Use in: Author Stats
     def _find_similar_author_names(self, target_name: str, all_authors: Dict[str, Any]) -> List[str]:
         """Find similar author names using simple string similarity."""
         import difflib
@@ -1852,3 +1926,5 @@ class AnalysisAgent(BaseAgent):
         # Sort by similarity score and return just the names
         similar_authors.sort(key=lambda x: x[1], reverse=True)
         return [name for name, _ in similar_authors[:10]]
+
+

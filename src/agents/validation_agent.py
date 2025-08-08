@@ -606,7 +606,46 @@ class ValidationAgent(BaseAgent):
     
     async def _validate_domain_evolution(self, result: Dict[str, Any]) -> float:
         """Validate domain evolution specific content."""
-        return await self._validate_technology_trends(result)
+        score = 1.0
+        
+        # Check for required domain evolution fields
+        required_fields = ["evolution_timeline", "conceptual_evolution", "domain", "time_periods"]
+        for field in required_fields:
+            if field not in result:
+                self._log_warning(f"Missing required domain evolution field: {field}")
+                score *= 0.7
+        
+        # Validate evolution timeline
+        if "evolution_timeline" in result:
+            timeline = result["evolution_timeline"]
+            if not isinstance(timeline, dict):
+                score *= 0.8
+            else:
+                if "periods" not in timeline:
+                    score *= 0.8
+                if "methodology_transitions" not in timeline:
+                    score *= 0.8
+                if "evolution_phases" not in timeline:
+                    score *= 0.8
+        
+        # Validate conceptual evolution
+        if "conceptual_evolution" in result:
+            conceptual = result["conceptual_evolution"]
+            if not isinstance(conceptual, dict):
+                score *= 0.8
+            else:
+                if "periods" not in conceptual:
+                    score *= 0.8
+                if "conceptual_shifts" not in conceptual:
+                    score *= 0.8
+        
+        # Check data quality
+        if "total_papers" in result:
+            total_papers = result.get("total_papers", 0)
+            if total_papers < 10:
+                score *= 0.9  # Lower penalty for small datasets
+        
+        return max(0.3, score)  # Minimum score of 0.3
     
     async def _validate_cross_domain(self, result: Dict[str, Any]) -> float:
         """Validate cross-domain specific content."""

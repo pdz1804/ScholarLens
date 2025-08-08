@@ -7,13 +7,13 @@ Responsible for finding relevant papers using both keyword-based and            
                     search_type = result.get('search_type', 'unknown')
                     search_types[search_type] = search_types.get(search_type, 0) + 1
                 
-                self.logger.info(f"Search type distribution: {dict(search_types)}")
-                self.logger.info(f"Score range: {final_results[0]['score']:.3f} to {final_results[-1]['score']:.3f}")
+                self._log_info(f"Search type distribution: {dict(search_types)}")
+                self._log_info(f"Score range: {final_results[0]['score']:.3f} to {final_results[-1]['score']:.3f}")
                 
                 # Log additional score details
                 scores = [r['score'] for r in final_results]
-                self.logger.info(f"Average score: {sum(scores)/len(scores):.3f}")
-                self.logger.info(f"Results above threshold {self.score_threshold}: {len([s for s in scores if s >= self.score_threshold])}")
+                self._log_info(f"Average score: {sum(scores)/len(scores):.3f}")
+                self._log_info(f"Results above threshold {self.score_threshold}: {len([s for s in scores if s >= self.score_threshold])}")
             
             return final_resultsapproaches.
 """
@@ -63,7 +63,7 @@ class RetrievalAgent(BaseAgent):
         self.hybrid_alpha = retrieval_config.get('hybrid_alpha', 0.7)
 
         # Log configuration for debugging
-        self.logger.info(f"Retrieval Agent Config: initial_top_k={self.initial_top_k}, "
+        self._log_info(f"Retrieval Agent Config: initial_top_k={self.initial_top_k}, "
                         f"final_top_k={self.final_top_k}, hybrid_alpha={self.hybrid_alpha}, "
                         f"score_threshold={self.score_threshold}")
     
@@ -76,7 +76,7 @@ class RetrievalAgent(BaseAgent):
         if not self.data_manager.is_initialized:
             await self.data_manager.initialize()
             
-        self.logger.info("Retrieval agent initialized with hybrid search capabilities")
+        self._log_info("Retrieval agent initialized with hybrid search capabilities")
     
     async def _process_impl(self, query: Query) -> RetrievalResult:
         """
@@ -89,7 +89,7 @@ class RetrievalAgent(BaseAgent):
             RetrievalResult with relevant papers and metadata
         """
         try:
-            self.logger.info(f"Processing retrieval query: {query.text}")
+            self._log_info(f"Processing retrieval query: {query.text}")
             
             # Get retrieval configuration
             retrieval_config = self.llm_manager.get_retrieval_config() if self.llm_manager else {}
@@ -102,8 +102,8 @@ class RetrievalAgent(BaseAgent):
                 score_threshold = retrieval_config.get('trends_score_threshold', 0.1)
                 search_alpha = query.parameters.get('search_alpha', self.hybrid_alpha)
                 
-                self.logger.info(f"TRENDS MODE: Using expanded retrieval settings")
-                self.logger.info(f"Trends search parameters: initial_k={initial_limit}, final_k={final_limit}, alpha={search_alpha}, threshold={score_threshold}")
+                self._log_info(f"TRENDS MODE: Using expanded retrieval settings")
+                self._log_info(f"Trends search parameters: initial_k={initial_limit}, final_k={final_limit}, alpha={search_alpha}, threshold={score_threshold}")
                 
                 # Override score threshold for trends
                 original_threshold = self.score_threshold
@@ -115,25 +115,25 @@ class RetrievalAgent(BaseAgent):
                 final_limit = query.parameters.get('limit', self.initial_top_k)  # Use initial_top_k instead of final_top_k
                 search_alpha = query.parameters.get('search_alpha', self.hybrid_alpha)
                 
-                self.logger.info(f"Search parameters: initial_k={initial_limit}, final_k={final_limit}, alpha={search_alpha}, threshold={self.score_threshold}")
+                self._log_info(f"Search parameters: initial_k={initial_limit}, final_k={final_limit}, alpha={search_alpha}, threshold={self.score_threshold}")
             
             # Perform hybrid search based on query type
             if query.query_type == QueryType.AUTHOR_EXPERTISE:
-                self.logger.info("Using hybrid search for author expertise query")
+                self._log_info("Using hybrid search for author expertise query")
                 # For author expertise queries, search for papers in the domain/topic mentioned
                 results = await self._hybrid_search(query.text, initial_limit, search_alpha)
             elif query.query_type == QueryType.AUTHOR_COLLABORATION:
-                self.logger.info("Using collaboration search")
+                self._log_info("Using collaboration search")
                 results = await self._search_collaborations(query.text, initial_limit)
             elif query.query_type == QueryType.DOMAIN_EVOLUTION:
-                self.logger.info("Using domain-specific search")
+                self._log_info("Using domain-specific search")
                 results = await self._search_by_domain(query.text, initial_limit)
             elif query.query_type == QueryType.TECHNOLOGY_TRENDS:
-                self.logger.info("Using EXPANDED hybrid search for technology trends")
+                self._log_info("Using EXPANDED hybrid search for technology trends")
                 # For trends, use the expanded search with lower thresholds
                 results = await self._hybrid_search(query.text, initial_limit, search_alpha)
             else:
-                self.logger.info("Using general hybrid search")
+                self._log_info("Using general hybrid search")
                 # General hybrid search for other query types
                 results = await self._hybrid_search(query.text, initial_limit, search_alpha)
             
@@ -141,19 +141,19 @@ class RetrievalAgent(BaseAgent):
             if query.query_type == QueryType.TECHNOLOGY_TRENDS:
                 self.score_threshold = original_threshold
             
-            self.logger.info(f"Search completed: {len(results)} documents found after filtering")
+            self._log_info(f"Search completed: {len(results)} documents found after filtering")
             
             # Apply time range filtering if specified
             if 'time_range' in query.parameters and query.parameters['time_range']:
-                self.logger.info(f"Applying time range filter: {query.parameters['time_range']}")
+                self._log_info(f"Applying time range filter: {query.parameters['time_range']}")
                 results = self._filter_by_time_range(results, query.parameters['time_range'])
-                self.logger.info(f"After time filtering: {len(results)} documents remain")
+                self._log_info(f"After time filtering: {len(results)} documents remain")
             
             # Apply final limit based on query type
             if query.query_type == QueryType.TECHNOLOGY_TRENDS:
                 # For trends, use much larger final result set
                 final_results = results[:final_limit] if final_limit < len(results) else results
-                self.logger.info(f"TRENDS MODE: Keeping {len(final_results)} papers for comprehensive analysis")
+                self._log_info(f"TRENDS MODE: Keeping {len(final_results)} papers for comprehensive analysis")
             else:
                 # Standard result limiting
                 final_results = results[:self.initial_top_k] if self.initial_top_k < len(results) else results
@@ -171,22 +171,22 @@ class RetrievalAgent(BaseAgent):
                         retrieval_method=result.get('search_type', 'hybrid')
                     ))
                 else:
-                    self.logger.warning(f"Failed to convert document {i+1} to Paper object")
+                    self._log_warning(f"Failed to convert document {i+1} to Paper object")
             
-            self.logger.info(f"Successfully converted {len(retrieval_results)} documents to Paper objects")
+            self._log_info(f"Successfully converted {len(retrieval_results)} documents to Paper objects")
             
             if retrieval_results:
-                self.logger.info("Top retrieved papers:")
+                self._log_info("Top retrieved papers:")
                 for i, result in enumerate(retrieval_results[:5], 1):
-                    self.logger.info(f"  {i}. {result.paper.title[:70]}...")
-                    self.logger.info(f"     Authors: {', '.join(result.paper.authors[:3])}")
-                    self.logger.info(f"     Score: {result.score:.3f}, Method: {result.retrieval_method}")
-                    self.logger.info(f"     Paper ID: {result.paper.paper_id}")
+                    self._log_info(f"  {i}. {result.paper.title[:70]}...")
+                    self._log_info(f"     Authors: {', '.join(result.paper.authors[:3])}")
+                    self._log_info(f"     Score: {result.score:.3f}, Method: {result.retrieval_method}")
+                    self._log_info(f"     Paper ID: {result.paper.paper_id}")
             
             return retrieval_results
             
         except Exception as e:
-            self.logger.error(f"Error in retrieval processing: {str(e)}")
+            self._log_error(f"Error in retrieval processing: {str(e)}")
             return []
     
     async def _hybrid_search(self, query_text: str, limit: int, alpha: float = 0.7) -> List[Dict]:
@@ -202,9 +202,9 @@ class RetrievalAgent(BaseAgent):
             List of search results with scores
         """
         try:
-            self.logger.info(f"Performing hybrid search: '{query_text}'")
-            self.logger.info(f"Alpha (dense weight): {alpha}, Sparse weight: {1-alpha}")
-            self.logger.info(f"Using score threshold: {self.score_threshold}")
+            self._log_info(f"Performing hybrid search: '{query_text}'")
+            self._log_info(f"Alpha (dense weight): {alpha}, Sparse weight: {1-alpha}")
+            self._log_info(f"Using score threshold: {self.score_threshold}")
             
             # Use the improved hybrid search with score filtering
             results = self.data_manager.hybrid_searcher.search(
@@ -214,7 +214,7 @@ class RetrievalAgent(BaseAgent):
                 score_threshold=self.score_threshold  # Filter by score threshold (lower for trends)
             )
             
-            self.logger.info(f"Hybrid search returned {len(results)} results after filtering (threshold: {self.score_threshold})")
+            self._log_info(f"Hybrid search returned {len(results)} results after filtering (threshold: {self.score_threshold})")
             if results:
                 # Log search method distribution
                 search_types = {}
@@ -222,17 +222,17 @@ class RetrievalAgent(BaseAgent):
                     search_type = result.get('search_type', 'unknown')
                     search_types[search_type] = search_types.get(search_type, 0) + 1
                 
-                self.logger.info(f"Search type distribution: {dict(search_types)}")
-                self.logger.info(f"Score range: {results[0]['score']:.3f} to {results[-1]['score']:.3f}")
+                self._log_info(f"Search type distribution: {dict(search_types)}")
+                self._log_info(f"Score range: {results[0]['score']:.3f} to {results[-1]['score']:.3f}")
                 
                 # Log additional score details
                 scores = [r['score'] for r in results]
-                self.logger.info(f"Average score: {sum(scores)/len(scores):.3f}")
-                self.logger.info(f"Results above threshold {self.score_threshold}: {len([s for s in scores if s >= self.score_threshold])}")
+                self._log_info(f"Average score: {sum(scores)/len(scores):.3f}")
+                self._log_info(f"Results above threshold {self.score_threshold}: {len([s for s in scores if s >= self.score_threshold])}")
             
             return results
         except Exception as e:
-            self.logger.error(f"Hybrid search failed: {str(e)}")
+            self._log_error(f"Hybrid search failed: {str(e)}")
             return []
     
     async def _search_by_author(self, author_query: str, limit: int) -> List[Dict]:
@@ -251,7 +251,7 @@ class RetrievalAgent(BaseAgent):
             author_name = await self._extract_author_name(author_query)
             return self.data_manager.hybrid_searcher.search_by_author(author_name, k=limit)
         except Exception as e:
-            self.logger.error(f"Author search failed: {str(e)}")
+            self._log_error(f"Author search failed: {str(e)}")
             return []
     
     async def _search_by_domain(self, domain_query: str, limit: int) -> List[Dict]:
@@ -270,7 +270,7 @@ class RetrievalAgent(BaseAgent):
             domain = await self._extract_domain(domain_query)
             return self.data_manager.hybrid_searcher.search_by_category(domain, k=limit)
         except Exception as e:
-            self.logger.error(f"Domain search failed: {str(e)}")
+            self._log_error(f"Domain search failed: {str(e)}")
             return []
     
     async def _search_collaborations(self, collab_query: str, limit: int) -> List[Dict]:
@@ -289,7 +289,7 @@ class RetrievalAgent(BaseAgent):
             enhanced_query = f"collaboration coauthor research {collab_query}"
             return await self._hybrid_search(enhanced_query, limit, alpha=0.6)
         except Exception as e:
-            self.logger.error(f"Collaboration search failed: {str(e)}")
+            self._log_error(f"Collaboration search failed: {str(e)}")
             return []
     
     def _result_to_paper(self, document: Dict) -> Optional[Paper]:
@@ -325,7 +325,7 @@ class RetrievalAgent(BaseAgent):
                 pdf_url=''
             )
         except Exception as e:
-            self.logger.warning(f"Failed to convert document to Paper: {str(e)}")
+            self._log_warning(f"Failed to convert document to Paper: {str(e)}")
             return None
     
     async def _extract_author_name(self, query: str) -> str:
@@ -342,7 +342,7 @@ class RetrievalAgent(BaseAgent):
             extracted = await self.extraction_service.extract_author_name(query)
             return extracted if extracted else query
         except Exception as e:
-            self.logger.error(f"Failed to extract author name via LLM: {e}")
+            self._log_error(f"Failed to extract author name via LLM: {e}")
             # Fallback to simple extraction
             import re
             cleaned = re.sub(r'who are.*?authors?.*?in|top.*?authors?.*?in|papers?.*?by', '', query.lower(), flags=re.IGNORECASE)
@@ -363,7 +363,7 @@ class RetrievalAgent(BaseAgent):
             extracted = await self.extraction_service.extract_search_term_from_query(query)
             return extracted if extracted else query
         except Exception as e:
-            self.logger.error(f"Failed to extract domain via LLM: {e}")
+            self._log_error(f"Failed to extract domain via LLM: {e}")
             # Fallback to pattern matching
             import re
             
@@ -413,15 +413,15 @@ class RetrievalAgent(BaseAgent):
             year_pattern = r'\b(?:19|20)\d{2}\b'
             years = re.findall(year_pattern, time_range)
             
-            self.logger.info(f"DEBUG: time_range='{time_range}', years={years}")
+            self._log_info(f"DEBUG: time_range='{time_range}', years={years}")
             
             if len(years) >= 2:
                 # Range like "2022 to 2025" - now years will be ['2022', '2025']
                 start_year = int(years[0])
                 end_year = int(years[-1])
                 
-                self.logger.info(f"DEBUG: Parsed range {start_year} to {end_year}")
-                self.logger.info(f"Filtering papers from {start_year} to {end_year}")
+                self._log_info(f"DEBUG: Parsed range {start_year} to {end_year}")
+                self._log_info(f"Filtering papers from {start_year} to {end_year}")
                 
             elif len(years) == 1:
                 # Single year or "since/before" patterns - now years[0] is the full year
@@ -438,9 +438,9 @@ class RetrievalAgent(BaseAgent):
                     start_year = year
                     end_year = year
                 
-                self.logger.info(f"Filtering papers from {start_year} to {end_year}")
+                self._log_info(f"Filtering papers from {start_year} to {end_year}")
             else:
-                self.logger.warning(f"Could not parse time range: {time_range}")
+                self._log_warning(f"Could not parse time range: {time_range}")
                 return results
             
             # Filter results based on paper publication date
@@ -486,15 +486,15 @@ class RetrievalAgent(BaseAgent):
                             filtered_results.append(result)
                         
                 except Exception as e:
-                    self.logger.debug(f"Error filtering paper by date: {e}")
+                    self._log_debug(f"Error filtering paper by date: {e}")
                     # If we can't determine the date, include the paper
                     filtered_results.append(result)
             
-            self.logger.info(f"Time filtering: {len(results)} -> {len(filtered_results)} papers")
+            self._log_info(f"Time filtering: {len(results)} -> {len(filtered_results)} papers")
             return filtered_results
             
         except Exception as e:
-            self.logger.error(f"Error in time range filtering: {e}")
+            self._log_error(f"Error in time range filtering: {e}")
             return results
     
     def get_stats(self) -> Dict[str, Any]:

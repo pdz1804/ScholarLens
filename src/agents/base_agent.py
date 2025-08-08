@@ -23,7 +23,8 @@ class BaseAgent(ABC):
         """
         self.agent_name = agent_name
         self.config = config_manager.config
-        self.logger = get_logger(f"{agent_name}Agent")
+        # Use the global logger with agent name prefix in messages
+        self.logger = get_logger()
         self.is_initialized = False
         self.metrics = {
             "total_requests": 0,
@@ -38,10 +39,26 @@ class BaseAgent(ABC):
         if self.is_initialized:
             return
         
-        self.logger.info(f"Initializing {self.agent_name} agent")
+        self._log_info(f"Initializing {self.agent_name} agent")
         await self._initialize_impl()
         self.is_initialized = True
-        self.logger.info(f"{self.agent_name} agent initialized successfully")
+        self._log_info(f"{self.agent_name} agent initialized successfully")
+    
+    def _log_info(self, message: str):
+        """Log info message with agent name prefix."""
+        self.logger.info(f"[{self.agent_name}Agent] {message}")
+    
+    def _log_warning(self, message: str):
+        """Log warning message with agent name prefix."""
+        self.logger.warning(f"[{self.agent_name}Agent] {message}")
+    
+    def _log_error(self, message: str):
+        """Log error message with agent name prefix."""
+        self.logger.error(f"[{self.agent_name}Agent] {message}")
+    
+    def _log_debug(self, message: str):
+        """Log debug message with agent name prefix."""
+        self.logger.debug(f"[{self.agent_name}Agent] {message}")
     
     @abstractmethod
     async def _initialize_impl(self) -> None:

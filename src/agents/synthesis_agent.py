@@ -120,7 +120,7 @@ class SynthesisAgent(BaseAgent):
             return enhanced_result
             
         except Exception as e:
-            self.logger.error(f"Synthesis failed: {e}")
+            self._log_error(f"Synthesis failed: {e}")
             return SynthesisResult(
                 result={"error": f"Synthesis failed: {e}"},
                 confidence=0.0,
@@ -256,7 +256,7 @@ Keep your response concise (2-3 sentences) and focus on the most significant ins
             return response.strip() if response else ""
             
         except Exception as e:
-            self.logger.warning(f"Failed to generate LLM insights: {e}")
+            self._log_warning(f"Failed to generate LLM insights: {e}")
             return ""
     
     async def _synthesize_author_collaboration(
@@ -378,7 +378,7 @@ Keep your response concise (2-3 sentences) and focus on the most significant ins
         
         if analysis_data.get('analysis_type') != 'domain_evolution':
             # Fallback to technology trends if not proper domain evolution analysis
-            self.logger.warning("Analysis data is not domain evolution type, falling back to technology trends synthesis")
+            self._log_warning("Analysis data is not domain evolution type, falling back to technology trends synthesis")
             return await self._synthesize_technology_trends(query, retrieval_results, analysis_result)
         
         # Use LLM for intelligent synthesis of domain evolution insights
@@ -402,8 +402,21 @@ Keep your response concise (2-3 sentences) and focus on the most significant ins
                 llm_insights = "LLM insights unavailable - manager not initialized"
                 
         except Exception as e:
-            self.logger.warning(f"LLM synthesis failed: {e}")
+            self._log_warning(f"LLM synthesis failed: {e}")
             llm_insights = f"LLM synthesis error: {str(e)}"
+        
+        # Generate LLM-based comprehensive sections
+        self._log_info("Generating evolution analysis section...")
+        evolution_analysis = await self._generate_evolution_analysis_section(analysis_data)
+        self._log_info(f"Evolution analysis generated: {len(evolution_analysis)} characters")
+        
+        self._log_info("Generating evolution overview section...")
+        evolution_overview = await self._generate_evolution_overview_section(analysis_data)
+        self._log_info(f"Evolution overview generated: {len(evolution_overview)} characters")
+        
+        self._log_info("Generating future trajectory section...")
+        future_trajectory_detailed = await self._generate_future_trajectory_section(analysis_data)
+        self._log_info(f"Future trajectory generated: {len(future_trajectory_detailed)} characters")
         
         # Create comprehensive domain evolution synthesis
         result_dict = {
@@ -412,6 +425,9 @@ Keep your response concise (2-3 sentences) and focus on the most significant ins
             "key_insights": self._extract_domain_evolution_insights(analysis_data),
             "paradigm_shifts": self._identify_paradigm_shifts(analysis_data),
             "future_trajectory": self._predict_future_trajectory(analysis_data),
+            "evolution_analysis": evolution_analysis,
+            "evolution_overview": evolution_overview,
+            "future_trajectory_detailed": future_trajectory_detailed,
             "llm_insights": llm_insights
         }
         
@@ -439,19 +455,69 @@ Keep your response concise (2-3 sentences) and focus on the most significant ins
         analysis_result: AnalysisResult
     ) -> SynthesisResult:
         """Synthesize cross-domain analysis."""
+        self._log_info("Starting cross-domain synthesis")
         analysis_data = analysis_result.results
+        
+        # Log analysis data structure
+        self._log_info(f"Analysis data keys: {list(analysis_data.keys())}")
+        self._log_info(f"Total authors analyzed: {analysis_data.get('total_authors_analyzed', 0)}")
+        self._log_info(f"Interdisciplinary authors found: {analysis_data.get('interdisciplinary_authors', 0)}")
+        
+        # Generate manual insights with logging (fallback)
+        self._log_info("Generating basic cross-domain insights...")
+        basic_insights = self._generate_cross_domain_insights(analysis_data)
+        basic_summary = self._create_cross_domain_summary(analysis_data)
+        basic_opportunities = self._identify_interdisciplinary_opportunities(analysis_data)
+        
+        # Prepare data for LLM synthesis
+        cross_domain_authors = analysis_data.get('cross_domain_authors', [])
+        top_researchers = []
+        for author_info in cross_domain_authors[:5]:
+            top_researchers.append(f"{author_info['author']} ({author_info['domain_count']} domains, {author_info['paper_count']} papers)")
+        
+        # Get domain combinations from opportunities
+        domain_combinations = basic_opportunities
+        
+        # Use LLM for enhanced synthesis
+        cross_domain_prompt = SynthesisPrompts.CROSS_DOMAIN.format(
+            query_text=query.text,
+            total_authors=analysis_data.get('total_authors_analyzed', 0),
+            interdisciplinary_authors=analysis_data.get('interdisciplinary_authors', 0),
+            top_researchers='; '.join(top_researchers) if top_researchers else 'None identified',
+            domain_combinations='; '.join(domain_combinations) if domain_combinations else 'No combinations found'
+        )
+        
+        try:
+            if self.llm_manager:
+                self._log_info("Generating LLM-enhanced cross-domain synthesis...")
+                llm_insights = await self.llm_manager.generate(
+                    system_prompt=SynthesisPrompts.CROSS_DOMAIN_SYSTEM,
+                    user_prompt=cross_domain_prompt,
+                    agent_name="synthesis"
+                )
+                self._log_info(f"LLM synthesis completed: {len(llm_insights)} characters")
+            else:
+                llm_insights = "LLM insights unavailable - manager not initialized"
+                self._log_warning("LLM manager not available for enhanced synthesis")
+                
+        except Exception as e:
+            self._log_warning(f"LLM synthesis failed: {e}")
+            llm_insights = f"LLM synthesis error: {str(e)}"
         
         result_dict = {
             "cross_domain_analysis": analysis_data,
-            "insights": self._generate_cross_domain_insights(analysis_data),
-            "summary": self._create_cross_domain_summary(analysis_data),
-            "interdisciplinary_opportunities": self._identify_interdisciplinary_opportunities(analysis_data)
+            "insights": basic_insights,
+            "summary": basic_summary,
+            "interdisciplinary_opportunities": basic_opportunities,
+            "llm_insights": llm_insights,
+            "enhanced": True
         }
         
+        self._log_info("Cross-domain synthesis completed successfully with LLM enhancement")
         return SynthesisResult(
             result=result_dict,
             confidence=analysis_result.confidence,
-            reasoning="Synthesized cross-domain analysis with interdisciplinary insights"
+            reasoning="Synthesized cross-domain analysis with LLM-enhanced interdisciplinary insights"
         )
     
     async def _synthesize_paper_impact(
@@ -547,7 +613,7 @@ Keep your response concise (2-3 sentences) and focus on the most significant ins
             return synthesis_result
             
         except Exception as e:
-            self.logger.warning(f"LLM enhancement failed: {e}")
+            self._log_warning(f"LLM enhancement failed: {e}")
             # Return original result if enhancement fails
             return synthesis_result
     
@@ -587,7 +653,7 @@ Keep your response concise (2-3 sentences) and focus on the most significant ins
             return response.choices[0].message.content.strip()
             
         except Exception as e:
-            self.logger.error(f"LLM insight generation failed: {e}")
+            self._log_error(f"LLM insight generation failed: {e}")
             return "Additional insights unavailable due to processing limitations."
     
     def _extract_key_findings(self, result: Dict[str, Any]) -> str:
@@ -764,59 +830,95 @@ Keep your response concise (2-3 sentences) and focus on the most significant ins
     
     def _generate_cross_domain_insights(self, analysis_data: Dict[str, Any]) -> List[str]:
         """Generate insights for cross-domain analysis."""
+        self._log_info("Generating cross-domain insights")
         insights = []
         
         cross_domain_authors = analysis_data.get("cross_domain_authors", [])
+        self._log_info(f"Processing {len(cross_domain_authors)} cross-domain authors for insights")
+        
         if cross_domain_authors:
             top_interdisciplinary = cross_domain_authors[0]
-            insights.append(
+            insight_text = (
                 f"Most interdisciplinary researcher: {top_interdisciplinary['author']} "
                 f"({top_interdisciplinary['domain_count']} domains)"
             )
+            insights.append(insight_text)
+            self._log_info(f"Top interdisciplinary insight: {insight_text}")
         
         total_authors = analysis_data.get("total_authors_analyzed", 0)
         interdisciplinary_count = len(cross_domain_authors)
         
         if total_authors > 0:
             interdisciplinary_ratio = interdisciplinary_count / total_authors
+            self._log_info(f"Interdisciplinary ratio: {interdisciplinary_ratio:.3f} ({interdisciplinary_count}/{total_authors})")
+            
             if interdisciplinary_ratio > 0.3:
-                insights.append("High level of interdisciplinary research activity")
+                insight_text = "High level of interdisciplinary research activity"
             else:
-                insights.append("Most researchers focus on specific domains")
+                insight_text = "Most researchers focus on specific domains"
+            
+            insights.append(insight_text)
+            self._log_info(f"Research pattern insight: {insight_text}")
         
+        self._log_info(f"Generated {len(insights)} cross-domain insights")
         return insights
     
     def _create_cross_domain_summary(self, analysis_data: Dict[str, Any]) -> str:
         """Create summary for cross-domain analysis."""
+        self._log_info("Creating cross-domain summary")
+        
         interdisciplinary_authors = len(analysis_data.get("cross_domain_authors", []))
         total_authors = analysis_data.get("total_authors_analyzed", 0)
+        single_domain_authors = analysis_data.get("single_domain_authors", 0)
         
-        return (
+        self._log_info(f"Summary stats - Interdisciplinary: {interdisciplinary_authors}, Total: {total_authors}, Single-domain: {single_domain_authors}")
+        
+        summary = (
             f"Cross-domain analysis identified {interdisciplinary_authors} interdisciplinary "
             f"researchers out of {total_authors} total authors analyzed."
         )
+        
+        self._log_info(f"Summary created: {summary}")
+        return summary
     
     def _identify_interdisciplinary_opportunities(self, analysis_data: Dict[str, Any]) -> List[str]:
         """Identify interdisciplinary research opportunities."""
+        self._log_info("Identifying interdisciplinary opportunities")
         opportunities = []
         
         cross_domain_authors = analysis_data.get("cross_domain_authors", [])
+        self._log_info(f"Analyzing {len(cross_domain_authors)} cross-domain authors for opportunities")
+        
         if cross_domain_authors:
             # Find common domain combinations
             domain_combinations = {}
             for author_data in cross_domain_authors:
                 domains = sorted(author_data.get("domains", []))
+                author_name = author_data.get("author", "Unknown")
+                self._log_debug(f"Author {author_name} works in domains: {domains}")
+                
                 if len(domains) >= 2:
                     combo = tuple(domains[:2])  # Take first two domains
                     domain_combinations[combo] = domain_combinations.get(combo, 0) + 1
             
+            self._log_info(f"Found {len(domain_combinations)} unique domain combinations")
+            
+            # Log all combinations
+            for combo, count in sorted(domain_combinations.items(), key=lambda x: x[1], reverse=True):
+                self._log_info(f"Domain combination: {' + '.join(combo)} - {count} researchers")
+            
             # Suggest promising combinations
             for combo, count in sorted(domain_combinations.items(), key=lambda x: x[1], reverse=True)[:3]:
-                opportunities.append(f"Promising interdisciplinary area: {' + '.join(combo)} ({count} researchers)")
+                opportunity = f"Promising interdisciplinary area: {' + '.join(combo)} ({count} researchers)"
+                opportunities.append(opportunity)
+                self._log_info(f"Opportunity identified: {opportunity}")
         
         if not opportunities:
-            opportunities.append("Consider exploring connections between established domains")
+            default_opportunity = "Consider exploring connections between established domains"
+            opportunities.append(default_opportunity)
+            self._log_info(f"Default opportunity added: {default_opportunity}")
         
+        self._log_info(f"Identified {len(opportunities)} interdisciplinary opportunities")
         return opportunities
     
     def _generate_impact_insights(self, analysis_data: Dict[str, Any]) -> List[str]:
@@ -939,9 +1041,13 @@ Keep your response concise (2-3 sentences) and focus on the most significant ins
             stats = analysis_data.get("stats", {})
             insights = [
                 f"Total papers: {stats.get('total_papers', 0)}",
+                f"Papers: {'; '.join(stats.get('papers', []))}",
                 f"Years active: {', '.join(map(str, stats.get('years_active', [])))}", 
-                f"Research areas: {', '.join(stats.get('subjects', [])[:3])}",
-                f"Collaborators: {stats.get('num_collaborators', 0)} unique researchers"
+                f"Research areas: {'; '.join(stats.get('subjects', []))}",
+                f"Num Collaborators: {stats.get('num_collaborators', 0)} unique researchers",
+                f"Collaborators: {'; '.join(stats.get('collaborators', []))}",
+                f"Institutions: {'; '.join(stats.get('institutions', []))}",
+                
             ]
             
             result_dict = {
@@ -1102,7 +1208,7 @@ Keep your response concise (2-3 sentences) and focus on the most significant ins
         # Timeline insights
         transitions = evolution_timeline.get('methodology_transitions', [])
         if transitions:
-            insights.append(f"Key methodology transitions identified: {len(transitions)} major shifts in research approaches")
+            insights.append(f"Major research approach shifts: {len(transitions)} major shifts in research approaches")
             
             # Identify most significant transition
             if transitions:
@@ -1110,12 +1216,12 @@ Keep your response concise (2-3 sentences) and focus on the most significant ins
                 if recent_transition:
                     new_methods = recent_transition.get('new_methodologies', [])
                     if new_methods:
-                        insights.append(f"Recent methodological shift: Introduction of {', '.join(new_methods[:2])}")
-        
+                        insights.append(f"New methodologies (top 5) emerged: {', '.join(new_methods[:5])}")
+
         # Conceptual insights
         shifts = conceptual_evolution.get('conceptual_shifts', [])
         if shifts:
-            insights.append(f"Conceptual evolution shows {len(shifts)} major problem focus changes")
+            insights.append(f"Problem focus evolution: {len(shifts)} major problem focus changes")
         
         # Trajectory insights
         problem_evolution = conceptual_evolution.get('problem_evolution_trajectory', {})
@@ -1128,6 +1234,25 @@ Keep your response concise (2-3 sentences) and focus on the most significant ins
                     insights.append("Problem complexity has increased over time, indicating more sophisticated challenges")
                 elif recent_complexity < early_complexity:
                     insights.append("Problem formulations have become more focused and streamlined")
+        
+        # Solution sophistication insights
+        solution_evolution = conceptual_evolution.get('solution_evolution_trajectory', {})
+        if solution_evolution:
+            sophistication_trend = solution_evolution.get('sophistication_trend', [])
+            if len(sophistication_trend) > 1:
+                recent_sophistication = sophistication_trend[-1].get('sophistication_score', 0)
+                early_sophistication = sophistication_trend[0].get('sophistication_score', 0)
+                
+                if recent_sophistication > early_sophistication:
+                    insights.append("Solution approaches have become increasingly sophisticated and advanced")
+        
+        # Evolution phases insights  
+        phases = evolution_timeline.get('evolution_phases', [])
+        if phases:
+            current_phase = phases[-1] if phases else None
+            if current_phase:
+                phase_type = current_phase.get('phase_type', 'Unknown Phase')
+                insights.append(f"Current research phase: {phase_type}")
         
         if not insights:
             insights.append("Limited evolution patterns detected in the analyzed time period")
@@ -1217,6 +1342,106 @@ Keep your response concise (2-3 sentences) and focus on the most significant ins
             trajectory["confidence_level"] = "Low"
         
         return trajectory
+    
+    async def _generate_evolution_analysis_section(self, analysis_data: Dict[str, Any]) -> str:
+        """Generate comprehensive evolution analysis section using LLM."""
+        try:
+            if not self.llm_manager:
+                self._log_warning("LLM manager not initialized for evolution analysis")
+                return "Evolution analysis unavailable - LLM manager not initialized"
+                
+            # Prepare context for LLM
+            timeline_data = analysis_data.get('evolution_timeline', {})
+            conceptual_data = analysis_data.get('conceptual_evolution', {})
+            
+            self._log_info(f"Timeline data keys: {list(timeline_data.keys())}")
+            self._log_info(f"Conceptual data keys: {list(conceptual_data.keys())}")
+            
+            evolution_analysis_prompt = SynthesisPrompts.EVOLUTION_ANALYSIS_SECTION.format(
+                evolution_timeline=self._format_timeline_data(timeline_data),
+                conceptual_evolution=self._format_conceptual_data(conceptual_data)
+            )
+            
+            self._log_info(f"Evolution analysis prompt length: {len(evolution_analysis_prompt)}")
+            
+            evolution_analysis = await self.llm_manager.generate(
+                system_prompt=SynthesisPrompts.EVOLUTION_ANALYSIS_SYSTEM,
+                user_prompt=evolution_analysis_prompt,
+                agent_name="synthesis",
+                max_tokens=512
+            )
+            
+            self._log_info(f"Generated evolution analysis: {evolution_analysis[:100]}...")
+            return evolution_analysis
+            
+        except Exception as e:
+            self._log_warning(f"Evolution analysis generation failed: {e}")
+            return f"Evolution analysis generation error: {str(e)}"
+    
+    async def _generate_evolution_overview_section(self, analysis_data: Dict[str, Any]) -> str:
+        """Generate evolution overview section using LLM."""
+        try:
+            if not self.llm_manager:
+                self._log_warning("LLM manager not initialized for evolution overview")
+                return "Evolution overview unavailable - LLM manager not initialized"
+                
+            domain = analysis_data.get('domain', 'Unknown Domain')
+            time_periods = analysis_data.get('time_periods', 0)
+            total_papers = analysis_data.get('total_papers', 0)
+            
+            self._log_info(f"Overview data - domain: {domain}, periods: {time_periods}, papers: {total_papers}")
+            
+            evolution_overview_prompt = SynthesisPrompts.EVOLUTION_OVERVIEW_SECTION.format(
+                domain=domain,
+                time_periods=time_periods,
+                total_papers=total_papers,
+                analysis_summary=str(analysis_data)[:500]  # Limit to avoid overly long prompts
+            )
+            
+            self._log_info(f"Evolution overview prompt length: {len(evolution_overview_prompt)}")
+            
+            evolution_overview = await self.llm_manager.generate(
+                system_prompt=SynthesisPrompts.EVOLUTION_OVERVIEW_SYSTEM,
+                user_prompt=evolution_overview_prompt,
+                agent_name="synthesis",
+                max_tokens=512
+            )
+            
+            self._log_info(f"Generated evolution overview: {evolution_overview[:100]}...")
+            return evolution_overview
+            
+        except Exception as e:
+            self._log_warning(f"Evolution overview generation failed: {e}")
+            return f"Evolution overview generation error: {str(e)}"
+    
+    async def _generate_future_trajectory_section(self, analysis_data: Dict[str, Any]) -> str:
+        """Generate detailed future trajectory section using LLM."""
+        try:
+            if not self.llm_manager:
+                return "Future trajectory unavailable - LLM manager not initialized"
+                
+            # Get trajectory predictions from helper method
+            trajectory_data = self._predict_future_trajectory(analysis_data)
+            paradigm_shifts = self._identify_paradigm_shifts(analysis_data)
+            
+            future_trajectory_prompt = SynthesisPrompts.FUTURE_TRAJECTORY_SECTION.format(
+                trajectory_data=str(trajectory_data),
+                paradigm_shifts=str(paradigm_shifts),
+                evolution_summary=str(analysis_data)
+            )
+            
+            future_trajectory = await self.llm_manager.generate(
+                system_prompt=SynthesisPrompts.FUTURE_TRAJECTORY_SYSTEM,
+                user_prompt=future_trajectory_prompt,
+                agent_name="synthesis",
+                max_tokens=640
+            )
+            
+            return future_trajectory
+            
+        except Exception as e:
+            self._log_warning(f"Future trajectory generation failed: {e}")
+            return f"Future trajectory generation error: {str(e)}"
 
 
 

@@ -12,6 +12,12 @@ class SynthesisPrompts:
     GENERAL_ANALYSIS_SYSTEM = "You are an expert research analyst providing insights on academic research patterns."
     COLLABORATION_SYSTEM = "You are an expert in research collaboration analysis and network insight generation."
     AUTHOR_EXPERTISE_SYSTEM = "You are an expert in academic expertise synthesis and research leadership assessment."
+    CROSS_DOMAIN_SYSTEM = "You are an expert in interdisciplinary research analysis, specializing in identifying knowledge transfer patterns and cross-domain innovation opportunities."
+    
+    # Domain Evolution Specific System Prompts
+    EVOLUTION_ANALYSIS_SYSTEM = "You are an expert at analyzing domain evolution patterns and providing comprehensive analysis of research field development."
+    EVOLUTION_OVERVIEW_SYSTEM = "You are an expert at providing high-level overviews of domain evolution, synthesizing complex development patterns into clear, comprehensive narratives."
+    FUTURE_TRAJECTORY_SYSTEM = "You are an expert at predicting future trajectories of research domains based on historical evolution patterns. Provide detailed, well-reasoned predictions with appropriate confidence levels."
 
     # Domain Evolution Synthesis Prompt
     DOMAIN_EVOLUTION = """## TASK:
@@ -63,6 +69,50 @@ Based on {total_papers} papers across {periods} time periods.
 Original Query: "{query_text}"
 
 Provide structured synthesis with executive summary, detailed analysis, and actionable recommendations."""
+
+    # Domain Evolution Specific Section Prompts
+    EVOLUTION_ANALYSIS_SECTION = """Based on the following domain evolution data, provide a comprehensive evolution analysis:
+
+Evolution Timeline: {evolution_timeline}
+Conceptual Evolution: {conceptual_evolution}
+
+Focus on:
+1. Major methodology transitions and their driving forces
+2. Conceptual shifts and paradigm changes
+3. Evolution patterns and their significance
+4. Critical turning points in the domain's development
+
+Provide a concise but detailed analysis in 2 focused paragraphs (max 200 words total)."""
+
+    EVOLUTION_OVERVIEW_SECTION = """Create an evolution overview for the domain: {domain}
+
+Key metrics:
+- Time periods analyzed: {time_periods}
+- Total papers: {total_papers}
+- Analysis data: {analysis_summary}
+
+Provide a high-level overview that:
+1. Summarizes the overall evolution trajectory
+2. Highlights the most significant transformations
+3. Contextualizes the domain's development within broader scientific trends
+4. Identifies the domain's current state and maturity level
+
+Write 2 comprehensive but concise paragraphs (max 200 words total)."""
+
+    FUTURE_TRAJECTORY_SECTION = """Based on the evolution analysis, predict the future trajectory of this domain:
+
+Current trajectory data: {trajectory_data}
+Recent paradigm shifts: {paradigm_shifts}
+Evolution patterns: {evolution_summary}
+
+Provide detailed future trajectory analysis covering:
+1. Likely methodological developments and innovations
+2. Emerging research directions and problem areas
+3. Potential paradigm shifts and their implications
+4. Technological and conceptual convergences
+5. Timeline predictions for major developments
+
+Write a focused analysis in 3 paragraphs with specific predictions and confidence levels (max 200 words total)."""
 
     # Technology Trends Synthesis Prompt
     TECHNOLOGY_TRENDS = """## TASK:
@@ -120,21 +170,40 @@ Detailed expertise profile with impact assessment and growth trajectory analysis
 
     # Cross-Domain Analysis Synthesis Prompt
     CROSS_DOMAIN = """## TASK:
-Synthesize cross-domain analysis to identify interdisciplinary research patterns.
+Synthesize cross-domain analysis results to identify interdisciplinary research patterns and knowledge transfer opportunities.
 
-## DATA ANALYSIS:
-{cross_domain_data}
+## DATA:
+Query: "{query_text}"
+Total Authors: {total_authors}
+Interdisciplinary Authors: {interdisciplinary_authors}
+Top Cross-Domain Researchers: {top_researchers}
+Domain Combinations: {domain_combinations}
 
-## SYNTHESIS REQUIREMENTS:
+## ANALYSIS FOCUS:
 
-1. **Interdisciplinary Connections**: Map research connections across domains
-2. **Knowledge Transfer**: Identify knowledge flow between fields
-3. **Emerging Intersections**: Highlight new interdisciplinary areas
-4. **Research Opportunities**: Suggest promising cross-domain research directions
-5. **Integration Patterns**: Analyze how different fields integrate methodologies
+**1. Interdisciplinary Leaders**: Identify researchers bridging multiple domains effectively
+- Who are the key knowledge bridges between fields?
+- What makes them successful at cross-domain work?
 
-## OUTPUT:
-Comprehensive cross-domain analysis with integration insights and future opportunities."""
+**2. Knowledge Transfer Patterns**: Map how ideas flow between domains
+- Which domain combinations show active knowledge exchange?
+- What methodologies are crossing domain boundaries?
+
+**3. Emerging Opportunities**: Highlight promising interdisciplinary directions
+- Which domain intersections are underexplored?
+- What cross-pollination opportunities exist?
+
+**4. Barriers & Enablers**: Understand interdisciplinary research dynamics
+- What factors facilitate cross-domain collaboration?
+- Where are the gaps in interdisciplinary coverage?
+
+## OUTPUT REQUIREMENTS:
+- Executive summary (2-3 sentences)
+- Key interdisciplinary insights (3-4 bullet points)
+- Knowledge transfer opportunities (2-3 specific suggestions)
+- Actionable recommendations for cross-domain research
+
+Keep analysis focused, practical, and under 200 words total."""
 
     # Paper Impact Synthesis Prompt
     PAPER_IMPACT = """## TASK:

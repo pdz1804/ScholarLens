@@ -8,6 +8,7 @@ import json
 import logging
 from typing import Dict, List, Any, Tuple, Optional
 from ..core.llm_manager import LLMManager
+from .logger import get_logger
 
 
 class LLMParsingUtility:
@@ -15,7 +16,7 @@ class LLMParsingUtility:
     
     def __init__(self, config_path: str = None):
         """Initialize the LLM parsing utility."""
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger()  # Use global logger
         
         # If no config path provided, use default path relative to project root
         if config_path is None:

@@ -204,6 +204,7 @@ def print_query_response(response, format_type: str = "text", logger=None) -> No
                 logger.info("Top Results:")
             else:
                 print(f"\nTop Results:")
+                
             if 'authors' in response.data and response.data['authors']:
                 # Show top 20 authors and explain the score
                 authors_to_show = min(20, len(response.data['authors']))
@@ -512,10 +513,23 @@ def print_query_response(response, format_type: str = "text", logger=None) -> No
             elif 'domain_evolution_analysis' in response.data or 'paradigm_shifts' in response.data:
                 # Domain evolution results with cleaner formatting
                 log_or_print("Evolution Analysis:", logger)
-                log_or_print("", logger)
                 
-                # Show evolution summary if available
-                if 'evolution_summary' in response.data:
+                # Show evolution analysis section if available
+                if 'evolution_analysis' in response.data:
+                    analysis_content = response.data['evolution_analysis']
+                    if isinstance(analysis_content, str) and analysis_content.strip():
+                        log_or_print(analysis_content.strip(), logger)
+                    log_or_print("", logger)
+                
+                # Show evolution overview section if available  
+                if 'evolution_overview' in response.data:
+                    overview_content = response.data['evolution_overview']
+                    log_or_print("Evolution Overview:", logger)
+                    if isinstance(overview_content, str) and overview_content.strip():
+                        log_or_print(overview_content.strip(), logger)
+                    log_or_print("", logger)
+                elif 'evolution_summary' in response.data:
+                    # Fallback to old format
                     summary = response.data['evolution_summary']
                     log_or_print("Evolution Overview:", logger)
                     if isinstance(summary, dict):
@@ -565,7 +579,14 @@ def print_query_response(response, format_type: str = "text", logger=None) -> No
                     log_or_print("", logger)
                 
                 # Show future trajectory if available
-                if 'future_trajectory' in response.data and response.data['future_trajectory']:
+                if 'future_trajectory_detailed' in response.data and response.data['future_trajectory_detailed']:
+                    trajectory_content = response.data['future_trajectory_detailed']
+                    log_or_print("Future Trajectory:", logger)
+                    if isinstance(trajectory_content, str) and trajectory_content.strip():
+                        log_or_print(trajectory_content.strip(), logger)
+                    log_or_print("", logger)
+                elif 'future_trajectory' in response.data and response.data['future_trajectory']:
+                    # Fallback to old format
                     trajectory = response.data['future_trajectory']
                     log_or_print("Future Trajectory:", logger)
                     if isinstance(trajectory, dict):
@@ -842,6 +863,135 @@ def print_query_response(response, format_type: str = "text", logger=None) -> No
                         log_or_print("", logger)
                         log_or_print("❌ No similar author names found.", logger)
                         log_or_print("💭 Suggestion: Check the spelling or try a different author name.", logger)
+            elif 'cross_domain_authors' in response.data or 'cross_domain_analysis' in response.data:
+                # Cross-domain analysis results
+                log_or_print("Cross-Domain Research Analysis", logger)
+                log_or_print("="*60, logger)
+                
+                # Get the cross-domain data - it might be nested under 'cross_domain_analysis'
+                cross_domain_data = response.data.get('cross_domain_analysis', response.data)
+                
+                # Show interdisciplinary authors
+                cross_domain_authors = cross_domain_data.get('cross_domain_authors', [])
+                if cross_domain_authors:
+                    log_or_print(f"Found {len(cross_domain_authors)} interdisciplinary researchers", logger)
+                    log_or_print("", logger)
+                    log_or_print("Top 5 Interdisciplinary Researchers:", logger)
+
+                    for i, author_info in enumerate(cross_domain_authors[:5], 1):  # Show top 5
+                        if isinstance(author_info, dict):
+                            name = author_info.get('author', author_info.get('name', 'Unknown'))
+                            domains = author_info.get('domains', [])
+                            domain_count = author_info.get('domain_count', len(domains))
+                            score = author_info.get('interdisciplinary_score', 0)
+                            papers_count = author_info.get('paper_count', 0)
+                            
+                            log_or_print(f"  {i:2d}. {name}", logger)
+                            log_or_print(f"      Domains: {domain_count}, Papers: {papers_count}", logger)
+                            log_or_print(f"      Interdisciplinary Score: {score}", logger)
+                            if domains:
+                                # Show domain names, limiting to readable length
+                                domain_display = domains[:4] if len(domains) <= 4 else domains[:3] + [f"(+{len(domains)-3} more)"]
+                                log_or_print(f"      Research Areas: {', '.join(domain_display)}", logger)
+                            log_or_print("", logger)
+                        else:
+                            log_or_print(f"  {i}. {author_info}", logger)
+                    log_or_print("", logger)
+                
+                # Show analysis statistics
+                total_authors = cross_domain_data.get('total_authors_analyzed', 0)
+                # Use the actual length of cross_domain_authors (top interdisciplinary researchers) not the total count
+                actual_interdisciplinary_count = len(cross_domain_authors)
+                # The 'interdisciplinary_authors' key contains the total count of all authors with multiple domains
+                total_interdisciplinary_count = cross_domain_data.get('interdisciplinary_authors', 0)
+                single_domain_count = cross_domain_data.get('single_domain_authors', 0)
+                avg_domains = cross_domain_data.get('average_domains_per_author', 0)
+                
+                if total_authors > 0:
+                    log_or_print("Analysis Summary:", logger)
+                    log_or_print(f"   • Total Authors Analyzed: {total_authors:,}", logger)
+                    log_or_print(f"   • Top Interdisciplinary Researchers Shown: {actual_interdisciplinary_count}", logger)
+                    
+                    # Only show the large total count if it's different and meaningful
+                    if total_interdisciplinary_count > actual_interdisciplinary_count:
+                        # Clarify what this large number represents
+                        log_or_print(f"   • Authors Working in Multiple Domains: {total_interdisciplinary_count:,}", logger)
+                        log_or_print(f"     (Note: This includes all authors with papers in 2+ domains)", logger)
+                    
+                    # Only show single domain count if it's meaningful (should be 0 for current analysis)
+                    if single_domain_count > 0:
+                        log_or_print(f"   • Single-Domain Researchers: {single_domain_count}", logger)
+                    
+                    log_or_print(f"   • Average Domains per Author: {avg_domains}", logger)
+                    
+                    # Calculate meaningful percentages - but only show if the rate is reasonable
+                    if total_interdisciplinary_count < total_authors:  # If not 100%
+                        interdisciplinary_pct = (total_interdisciplinary_count / total_authors) * 100
+                        log_or_print(f"   • Multi-Domain Research Rate: {interdisciplinary_pct:.1f}%", logger)
+                    
+                    log_or_print("", logger)
+                
+                # Show top domains
+                top_domains = cross_domain_data.get('top_domains', [])
+                if top_domains:
+                    log_or_print("Most Active Research Domains:", logger)
+                    for i, (domain, count) in enumerate(top_domains[:8], 1):  # Show top 8 domains
+                        log_or_print(f"  {i}. {domain}: {count} papers", logger)
+                    log_or_print("", logger)
+                
+                # Show domain distribution
+                domain_dist = cross_domain_data.get('domain_distribution', {})
+                if domain_dist:
+                    log_or_print("Domain Coverage Distribution:", logger)
+                    for domain_count in sorted(domain_dist.keys()):
+                        author_count = domain_dist[domain_count]
+                        log_or_print(f"   • {domain_count} domains: {author_count} researchers", logger)
+                    log_or_print("", logger)
+                
+                # Show synthesis insights from LLM if available
+                llm_insights = response.data.get('llm_insights', '')
+                synthesis_insights = response.data.get('synthesis_insights', '')
+                
+                insights_text = llm_insights or synthesis_insights
+                if insights_text and isinstance(insights_text, str) and insights_text.strip():
+                    log_or_print("Research Synthesis & Insights:", logger)
+                    # Format synthesis nicely
+                    insights_lines = insights_text.split('\n')
+                    for line in insights_lines:
+                        line = line.strip()
+                        if line:
+                            if line.startswith('# '):  # Handle main headers
+                                header_text = line.replace('# ', '').strip()
+                                log_or_print("", logger)
+                                log_or_print(f"{header_text}:", logger)
+                            elif line.startswith('## '):  # Handle sub headers
+                                header_text = line.replace('## ', '').strip()
+                                log_or_print("", logger)
+                                log_or_print(f"{header_text}:", logger)
+                            elif line.startswith('### '):  # Handle trip headers
+                                header_text = line.replace('### ', '').strip()
+                                log_or_print("", logger)
+                                log_or_print(f"{header_text}:", logger)
+                            elif line.startswith('**') and line.endswith('**'):  # Handle bold text
+                                log_or_print(f"   {line.replace('**', '').strip()}", logger)
+                            elif line.startswith('- ') or line.startswith('• '):  # Handle bullet points
+                                log_or_print(f"   {line}", logger)
+                            elif line.startswith(('1. ', '2. ', '3. ', '4. ', '5. ', '6. ', '7. ', '8. ', '9. ')):  # Handle numbered lists
+                                log_or_print(f"   {line}", logger)
+                            else:
+                                log_or_print(f"   {line}", logger)
+                    log_or_print("", logger)
+                
+                # Show opportunities if available
+                opportunities = response.data.get('interdisciplinary_opportunities', [])
+                if opportunities:
+                    log_or_print("Interdisciplinary Research Opportunities:", logger)
+                    for i, opportunity in enumerate(opportunities[:8], 1):  # Show top 8
+                        if isinstance(opportunity, str):
+                            log_or_print(f"   • {opportunity}", logger)
+                        else:
+                            log_or_print(f"   • {opportunity}", logger)
+                    log_or_print("", logger)
             else:
                 # Fallback: show raw data structure for debugging
                 available_keys = list(response.data.keys()) if response.data else "None"

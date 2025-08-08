@@ -20,7 +20,7 @@ from ..agents.synthesis_agent import SynthesisAgent
 from ..agents.validation_agent import ValidationAgent
 from ..data.data_manager import DataManager
 from ..utils.cache import CacheManager
-from ..utils.logger import setup_logger
+from ..utils.logger import get_logger
 from .llm_manager import LLMManager
 
 class QueryResponseAdapter:
@@ -209,12 +209,8 @@ class TechAuthorSystem:
         
         self.config = config_manager.config
         
-        # Setup logging
-        self.logger = setup_logger(
-            name="TechAuthor",
-            level=self.config.system.log_level,
-            log_file=config_manager.get('logging.file')
-        )
+        # Setup logging - use global logger (should already be configured by CLI)
+        self.logger = get_logger()
         
         # Initialize LLM manager with main config for retrieval settings
         self.llm_manager = LLMManager()
@@ -544,6 +540,33 @@ class TechAuthorSystem:
                 )
                 total_papers = analysis_result.results.get('total_papers_analyzed', 0)
                 self.logger.info(f"Found {author_count} unique authors to analyze from {total_papers} papers")
+            
+            elif query.query_type == QueryType.CROSS_DOMAIN_ANALYSIS:
+                # Cross-domain specific logging
+                total_authors = analysis_result.results.get('total_authors_analyzed', 0)
+                interdisciplinary_authors = analysis_result.results.get('interdisciplinary_authors', 0)
+                single_domain_authors = analysis_result.results.get('single_domain_authors', 0)
+                avg_domains = analysis_result.results.get('average_domains_per_author', 0)
+                
+                self.logger.info(f"Cross-domain analysis: {interdisciplinary_authors} interdisciplinary authors out of {total_authors} total")
+                self.logger.info(f"Single-domain authors: {single_domain_authors}")
+                self.logger.info(f"Average domains per author: {avg_domains}")
+                
+                # Log domain distribution
+                domain_distribution = analysis_result.results.get('domain_distribution', {})
+                if domain_distribution:
+                    self.logger.info("Domain coverage distribution:")
+                    for domain_count in sorted(domain_distribution.keys()):
+                        authors_count = domain_distribution[domain_count]
+                        self.logger.info(f"  - {domain_count} domains: {authors_count} authors")
+                
+                # Log top domains
+                top_domains = analysis_result.results.get('top_domains', [])
+                if top_domains:
+                    self.logger.info("Top domains by paper frequency:")
+                    for domain_name, paper_count in top_domains[:5]:
+                        self.logger.info(f"  - {domain_name}: {paper_count} papers")
+            
             else:
                 # Generic logging for other query types
                 total_papers = analysis_result.results.get('total_papers', 0) or analysis_result.results.get('total_papers_analyzed', 0)
@@ -574,7 +597,7 @@ class TechAuthorSystem:
         # Log synthesis insights
         if hasattr(synthesis_result.result, 'insights') and synthesis_result.result.insights:
             self.logger.info("Key insights from synthesis:")
-            for i, insight in enumerate(synthesis_result.result.insights[:3], 1):
+            for i, insight in enumerate(synthesis_result.result.insights, 1):
                 self.logger.info(f"  {i}. {insight}")
         
         if hasattr(synthesis_result.result, 'top_authors'):
@@ -589,7 +612,7 @@ class TechAuthorSystem:
                     subjects = author.get('subjects', [])
                     self.logger.info(f"  {i}. {name} (score: {score:.2f}, papers: {paper_count})")
                     if subjects:
-                        self.logger.info(f"     Research areas: {', '.join(subjects[:3])}")
+                        self.logger.info(f"     Research areas: {', '.join(subjects)}")
         
         # Log technology trends if applicable
         if hasattr(synthesis_result.result, 'trends'):
@@ -602,6 +625,46 @@ class TechAuthorSystem:
                 slope = trend.get('trend_slope', 0)    # Fixed: use correct field name
                 trend_direction = "increasing" if slope > 0 else "decreasing" if slope < 0 else "stable"
                 self.logger.info(f"  {i}. {name}: {papers} papers, slope={slope:.3f} ({trend_direction})")
+        
+        # Log cross-domain analysis results if applicable
+        if hasattr(synthesis_result.result, 'cross_domain_analysis'):
+            cross_domain_data = synthesis_result.result.cross_domain_analysis
+            cross_domain_authors = cross_domain_data.get('cross_domain_authors', [])
+            
+            self.logger.info(f"Cross-domain synthesis with {len(cross_domain_authors)} interdisciplinary authors:")
+            
+            # Log top interdisciplinary authors
+            if cross_domain_authors:
+                self.logger.info("Top 5 interdisciplinary authors:")
+                for i, author_info in enumerate(cross_domain_authors[:5], 1):
+                    name = author_info.get('author', 'Unknown')
+                    domain_count = author_info.get('domain_count', 0)
+                    paper_count = author_info.get('paper_count', 0)
+                    score = author_info.get('interdisciplinary_score', 0)
+                    domains = author_info.get('domains', [])
+                    
+                    self.logger.info(f"  {i}. {name}")
+                    self.logger.info(f"     - Domains: {domain_count}, Papers: {paper_count}, Score: {score}")
+                    self.logger.info(f"     - Fields: {', '.join(domains[:3])}{'...' if len(domains) > 3 else ''}")
+            
+            # Log interdisciplinary opportunities
+            if hasattr(synthesis_result.result, 'interdisciplinary_opportunities'):
+                opportunities = synthesis_result.result.interdisciplinary_opportunities
+                if opportunities:
+                    self.logger.info("Interdisciplinary opportunities identified:")
+                    for i, opportunity in enumerate(opportunities[:3], 1):
+                        self.logger.info(f"  {i}. {opportunity}")
+            
+            # Log LLM insights if available
+            if hasattr(synthesis_result.result, 'llm_insights'):
+                llm_insights = synthesis_result.result.llm_insights
+                if llm_insights and "LLM synthesis error" not in llm_insights:
+                    self.logger.info("LLM-Enhanced Cross-Domain Insights:")
+                    # Log first 200 characters of LLM insights
+                    insight_preview = llm_insights[:200] + "..." if len(llm_insights) > 200 else llm_insights
+                    self.logger.info(f"  {insight_preview}")
+                elif "error" in llm_insights.lower():
+                    self.logger.warning(f"LLM synthesis had issues: {llm_insights[:100]}...")
                         
         # Log overall synthesis insights
         if hasattr(synthesis_result.result, 'summary'):

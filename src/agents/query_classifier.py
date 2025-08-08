@@ -34,7 +34,7 @@ class QueryClassifierAgent(BaseAgent):
     async def _initialize_impl(self) -> None:
         """Initialize the query classifier agent."""
         # No initialization needed - LLM manager handles configuration
-        self.logger.info("Query classifier agent initialized with enhanced CoT prompts")
+        self._log_info("Query classifier agent initialized with enhanced CoT prompts")
     
     async def classify(self, query: Query) -> ClassificationResult:
         """Classify a query into appropriate type and extract parameters using enhanced CoT prompts.
@@ -90,16 +90,16 @@ class QueryClassifierAgent(BaseAgent):
                 json_match = re.search(r'```json\s*(\{.*?\})\s*```', response, re.DOTALL | re.MULTILINE)
                 if json_match:
                     json_str = json_match.group(1).strip()
-                    self.logger.debug(f"Extracted JSON from markdown: {json_str[:200]}...")
+                    self._log_debug(f"Extracted JSON from markdown: {json_str[:200]}...")
                 else:
                     # Try to find JSON object in the response (look for { ... })
                     json_match = re.search(r'(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})', response, re.DOTALL)
                     if json_match:
                         json_str = json_match.group(1).strip()
-                        self.logger.debug(f"Extracted JSON from response: {json_str[:200]}...")
+                        self._log_debug(f"Extracted JSON from response: {json_str[:200]}...")
                     else:
                         json_str = response.strip()
-                        self.logger.debug(f"Using full response as JSON: {json_str[:200]}...")
+                        self._log_debug(f"Using full response as JSON: {json_str[:200]}...")
                 
                 # Clean up the JSON string by removing line breaks within string values
                 # This fixes issues where the LLM breaks JSON strings across lines
@@ -108,8 +108,8 @@ class QueryClassifierAgent(BaseAgent):
                 
                 result = json.loads(json_str)
             except json.JSONDecodeError as e:
-                self.logger.error(f"JSON parsing failed: {e}")
-                self.logger.debug(f"Failed to parse: {json_str[:500] if 'json_str' in locals() else response[:500]}")
+                self._log_error(f"JSON parsing failed: {e}")
+                self._log_debug(f"Failed to parse: {json_str[:500] if 'json_str' in locals() else response[:500]}")
                 # Fallback parsing if JSON is malformed
                 result = self._fallback_parse(response)
             
@@ -124,14 +124,14 @@ class QueryClassifierAgent(BaseAgent):
                 reasoning=result.get('reasoning', 'No reasoning provided')
             )
             
-            self.logger.info(f"Classified query as: {query_type.value} (confidence: {classification_result.confidence:.2f})")
-            self.logger.debug(f"Extracted parameters: {classification_result.extracted_params}")
-            self.logger.debug(f"Reasoning: {classification_result.reasoning}")
+            self._log_info(f"Classified query as: {query_type.value} (confidence: {classification_result.confidence:.2f})")
+            self._log_debug(f"Extracted parameters: {classification_result.extracted_params}")
+            self._log_debug(f"Reasoning: {classification_result.reasoning}")
             
             return classification_result
             
         except Exception as e:
-            self.logger.error(f"Query classification failed: {str(e)}")
+            self._log_error(f"Query classification failed: {str(e)}")
             # Return default classification
             return ClassificationResult(
                 query_type=QueryType.AUTHOR_EXPERTISE,
