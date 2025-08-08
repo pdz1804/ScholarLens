@@ -292,6 +292,9 @@ class LLMManager:
         
         provider = self.providers[provider_name]
         
+        # Normalize token limit parameter for different providers
+        kwargs = self._normalize_token_parameters(provider_name, kwargs)
+        
         # Format messages and generate
         messages = provider.format_messages(system_prompt, user_prompt)
         
@@ -306,6 +309,26 @@ class LLMManager:
         except Exception as e:
             self.logger.error(f"LLM generation failed for {agent_name}: {str(e)}")
             raise
+    
+    def _normalize_token_parameters(self, provider_name: str, kwargs: dict) -> dict:
+        """Normalize token limit parameters for different providers."""
+        normalized_kwargs = kwargs.copy()
+        
+        # Check if max_tokens is specified (common parameter name)
+        if 'max_tokens' in kwargs:
+            max_tokens_value = kwargs['max_tokens']
+            
+            if provider_name == 'gemini':
+                # Gemini uses max_output_tokens
+                normalized_kwargs['max_output_tokens'] = max_tokens_value
+                normalized_kwargs.pop('max_tokens', None)
+            elif provider_name == 'ollama':
+                # Ollama uses num_predict
+                normalized_kwargs['num_predict'] = max_tokens_value
+                normalized_kwargs.pop('max_tokens', None)
+            # OpenAI uses max_tokens natively, so no change needed
+            
+        return normalized_kwargs
     
     def get_retrieval_config(self) -> Dict[str, Any]:
         """Get retrieval configuration from main config file."""

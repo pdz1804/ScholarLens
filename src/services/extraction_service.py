@@ -7,6 +7,7 @@ import json
 import logging
 from typing import List, Dict, Any, Optional, Tuple
 from ..core.models import RetrievalResult
+from ..utils.logger import get_logger
 from ..prompts.extraction_prompts import (
     METHODOLOGY_EXTRACTION_PROMPT,
     CONCEPT_EXTRACTION_PROMPT,
@@ -28,7 +29,7 @@ class ExtractionService:
             llm_manager: LLM manager instance for generating completions
         """
         self.llm_manager = llm_manager
-        self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+        self.logger = get_logger()  # Use global logger
         
     async def extract_methodologies_from_papers(
         self, 
@@ -442,3 +443,6 @@ Subjects: {', '.join(paper.subjects)}
                     return term
         
         return None
+
+
+

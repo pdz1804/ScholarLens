@@ -24,9 +24,17 @@ Your task is to classify user queries into specific query types and extract rele
    - "Current/recent developments in X" → TECHNOLOGY_TRENDS
    - "Technology adoption/popularity in X" → TECHNOLOGY_TRENDS
    - "Who collaborates with X?" or "Collaboration network of X" → AUTHOR_COLLABORATION
+   - "Authors working across X and Y" or "Interdisciplinary researchers in X and Y" → CROSS_DOMAIN_ANALYSIS
    - "Compare X and Y" → CROSS_DOMAIN_ANALYSIS
-   - "Find papers about X" → PAPER_IMPACT
+   - "Find papers about X" → PAPER_SEARCH
    - "Most productive authors" → AUTHOR_PRODUCTIVITY
+
+   **AUTHOR_COLLABORATION vs CROSS_DOMAIN_ANALYSIS - CRITICAL DISTINCTION:**
+   - "Who collaborates with [specific author]?" → AUTHOR_COLLABORATION (network of co-authors)
+   - "Show collaboration patterns in X field" → AUTHOR_COLLABORATION (general collaboration networks)
+   - "Which authors work across X and Y domains?" → CROSS_DOMAIN_ANALYSIS (interdisciplinary researchers)
+   - "Authors bridging X and Y fields" → CROSS_DOMAIN_ANALYSIS (interdisciplinary focus)
+   - "Compare X vs Y approaches" → CROSS_DOMAIN_ANALYSIS (comparative analysis)
 
    **DOMAIN_EVOLUTION vs TECHNOLOGY_TRENDS - CRITICAL DISTINCTION:**
    - "How has X evolved/developed/changed over time?" → DOMAIN_EVOLUTION (focuses on paradigm shifts, methodology evolution)
@@ -48,7 +56,7 @@ Your task is to classify user queries into specific query types and extract rele
 - TECHNOLOGY_TRENDS: Identifying currently popular technologies, adoption patterns, and recent breakthrough technologies
 - AUTHOR_COLLABORATION: Analyzing author collaboration patterns
 - DOMAIN_EVOLUTION: Deep historical analysis focusing on how research methodologies, problem formulations, and conceptual approaches have fundamentally changed over time
-- CROSS_DOMAIN_ANALYSIS: Comparing different technologies or cross-domain analysis
+- CROSS_DOMAIN_ANALYSIS: Finding interdisciplinary researchers who work across multiple domains, or comparing different technologies/approaches
 - PAPER_IMPACT: Finding specific papers or analyzing paper impact
 - AUTHOR_PRODUCTIVITY: Analyzing author productivity and publication patterns
 - AUTHOR_STATS: Getting detailed statistics about a specific author (when user asks about a specific author's stats, info, or profile)
@@ -93,7 +101,13 @@ Thinking: This asks for author productivity analysis with specific constraints o
 Classification: AUTHOR_PRODUCTIVITY
 Parameters: {{"domain": "cybersecurity", "top_k": null, "time_range": "last 5 years"}}
 
-**Example 7 - Cross-Domain Analysis:**
+**Example 7 - Cross-Domain Analysis (Interdisciplinary Researchers):**
+Query: "Which authors work across Machine Learning and Signal Processing?"
+Thinking: This asks for interdisciplinary authors who publish in multiple domains, not collaboration networks.
+Classification: CROSS_DOMAIN_ANALYSIS
+Parameters: {{"technologies": ["Machine Learning", "Signal Processing"], "domain": "Machine Learning and Signal Processing"}}
+
+**Example 7b - Cross-Domain Analysis (Comparison):**
 Query: "Compare the research approaches between machine learning and traditional statistics in data analysis"
 Thinking: This asks for comparison between different research approaches/domains.
 Classification: CROSS_DOMAIN_ANALYSIS
@@ -142,11 +156,17 @@ Thinking: Despite casual language, this asks about recent developments and trend
 Classification: TECHNOLOGY_TRENDS
 Parameters: {{"domain": "robotics", "time_range": "recent"}}
 
-**Example 11 - Complex Author Collaboration:**
+**Example 11 - Complex Author Collaboration (Network Analysis):**
 Query: "Map the collaboration patterns between deep learning researchers and neuroscientists in the past decade"
-Thinking: This asks for collaboration analysis between researchers from different but related fields.
+Thinking: This asks for collaboration analysis between researchers from different but related fields - it's about WHO works with WHOM, not who works ACROSS fields.
 Classification: AUTHOR_COLLABORATION
 Parameters: {{"domain": "deep learning and neuroscience", "time_range": "past decade", "technologies": ["deep learning", "neuroscience"]}}
+
+**Example 11b - Cross-Domain Analysis (Interdisciplinary Focus):**
+Query: "Who are the researchers bridging Image Processing and Biomolecules?"
+Thinking: This asks for interdisciplinary researchers who work in BOTH domains individually, not collaboration networks.
+Classification: CROSS_DOMAIN_ANALYSIS
+Parameters: {{"technologies": ["Image Processing", "Biomolecules"], "domain": "Image Processing and Biomolecules"}}
 
 **Example 12 - Domain Evolution vs Technology Trends:**
 Query: "Trace the historical development of artificial intelligence from symbolic AI to modern deep learning"

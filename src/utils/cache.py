@@ -186,7 +186,7 @@ class CacheManager:
             **kwargs: Additional backend-specific arguments
         """
         self.backend = backend
-        self.logger = get_logger("CacheManager")
+        self.logger = get_logger()  # Use global logger
         
         if backend == "memory":
             self.cache = MemoryCache(max_size, default_ttl)

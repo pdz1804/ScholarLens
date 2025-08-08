@@ -37,7 +37,7 @@ class DataConfig(BaseModel):
 class EmbeddingsConfig(BaseModel):
     """Embeddings configuration model."""
     model_config = {"protected_namespaces": ()}
-    
+    model_type: str = "sentence-transformers"  # Options: "sentence-transformers", "openai"    
     model_name: str = "all-MiniLM-L6-v2"
     dimension: int = 384
     batch_size: int = 32
@@ -47,12 +47,16 @@ class EmbeddingsConfig(BaseModel):
 class RetrievalConfig(BaseModel):
     """Retrieval configuration model."""
     # K-value settings
-    default_top_k: int = 10           # Default number of final results returned to user
+    default_top_k: int = 10          # Default number of final results returned to user
     max_top_k: int = 50              # Maximum allowed k value from CLI
     initial_top_k: int = 1000        # Initial retrieval count before filtering
     final_top_k: int = 20            # Final results passed to analysis agents
     rerank_top_k: int = 20           # Results to consider for reranking
     
+    trends_initial_top_k: int = 5000             # Much higher retrieval for trend analysis
+    trends_final_top_k: int = 1000               # More papers for comprehensive trend analysis
+    trends_score_threshold: float = 0.1          # Much lower threshold for trends (vs 0.5 default)
+
     # Similarity threshold settings
     min_similarity_threshold: float = 0.7    # Higher threshold for strict filtering
     score_threshold: float = 0.4             # Default score threshold for document filtering
@@ -62,7 +66,7 @@ class RetrievalConfig(BaseModel):
     rerank: bool = True                      # Enable result reranking
     
     # Search behavior settings
-    enable_score_filtering: bool = True       # Enable filtering by similarity scores
+    enable_score_filtering: bool = True      # Enable filtering by similarity scores
     normalize_scores: bool = True            # Normalize scores across different search types
     
     # Sparse search configuration

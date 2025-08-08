@@ -64,7 +64,7 @@ retrieval:
   
   # Similarity threshold settings
   min_similarity_threshold: 0.7    # Higher threshold for strict filtering
-  score_threshold: 0.5             # Default score threshold for document filtering
+  score_threshold: 0.4             # Default score threshold for document filtering
   
   # Hybrid search settings
   hybrid_alpha: 0.7                # Weight for dense vs sparse search (0.7 = 70% semantic, 30% keyword)

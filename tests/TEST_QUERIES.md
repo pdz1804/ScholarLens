@@ -22,10 +22,10 @@ This document contains test queries for each supported query type in the TechAut
 - **Expected behavior**: System should look up the specific author in the database and return their statistics including total papers, years active, research areas, and collaborators. If not found, should suggest similar author names.
 - **Parameters**: `{"author": "John Smolin"}`
 
-**Test Query 2**: "Show me stats for Nick Johnson"
+**Test Query 2**: "Show me stats for Lena Maier-Hein"
 
-- **Expected behavior**: Same as above but for Nick Johnson
-- **Parameters**: `{"author": "Nick Johnson"}`
+- **Expected behavior**: Same as above but for Lena Maier-Hein
+- **Parameters**: `{"author": "Lena Maier-Hein"}`
 
 ### 2. Paper Search Queries (PAPER_SEARCH)
 
@@ -75,7 +75,9 @@ This document contains test queries for each supported query type in the TechAut
 
 ### 3. Author Collaboration Queries
 
-**Description**: Map and analyze research collaboration networks, co-authorship patterns, and collaborative relationships between researchers within specific domains or across the entire academic network
+**Description**: Map and analyze research collaboration networks, co-authorship patterns, and collaborative relationships between researchers within specific domains or across the entire academic network. This focuses on WHO works WITH WHOM through co-authorship relationships.
+
+**Key Focus**: Co-authorship networks, collaboration patterns, research partnerships
 
 **Test Query 1**: "Who collaborates with Lei Zhang?"
 
@@ -94,30 +96,42 @@ This document contains test queries for each supported query type in the TechAut
 **Test Query 1**: "How has the conceptual approach to Computer Vision research evolved from 2021 to 2024?"
 
 - **Expected behavior**: Show paradigm shifts, fundamental changes in problem formulation, and conceptual transitions
-- **Parameters**: `{"domain": "Computer Vision", "time_range": "2021-2024", "analysis_type": "conceptual_evolution"}`
+- **Parameters**: `{"domain": "Computer Vision", "time_range": "2021-2024"}`
 - **Focus**: Paradigm shifts, conceptual changes, problem formulation evolution
 
 **Test Query 2**: "What are the fundamental conceptual changes in Natural Language Processing over time?"
 
 - **Expected behavior**: Track evolution in core concepts, theoretical approaches, and paradigm transitions
-- **Parameters**: `{"subject": "Natural Language Processing", "metrics": ["conceptual_shifts", "paradigm_evolution"]}`
+- **Parameters**: `{"subject": "Natural Language Processing"}`
 - **Focus**: Theoretical evolution, conceptual transitions, paradigm changes
 
 **Key Distinction from Technology Trends**: Domain Evolution focuses on *why* and *what* researchers study (conceptual shifts), while Technology Trends focuses on *how* they study it (methodological trends).
 
-### 5. Cross-Domain Analysis Queries (NOT DONE)
+### 5. Cross-Domain Analysis Queries 
 
-**Description**: Identify interdisciplinary researchers who contribute to multiple academic domains, analyze knowledge transfer patterns between fields, and discover researchers bridging different research areas through their diverse publication portfolios
+**Description**: Identify interdisciplinary researchers who contribute to multiple academic domains, analyze knowledge transfer patterns between fields, and discover researchers bridging different research areas through their diverse publication portfolios. This focuses on individual authors who work ACROSS multiple domains.
 
-**Test Query 1**: "Which authors work across Machine Learning and Signal Processing?" 
+**Key Focus**: Interdisciplinary researchers, multi-domain expertise, knowledge transfer between fields
 
-- **Expected behavior**: Identify interdisciplinary researchers
-- **Parameters**: `{"domains": ["Machine Learning", "Signal Processing"], "min_papers_per_domain": 2}`
+**Critical Distinction from Author Collaboration**:
+
+- **Author Collaboration**: Analyzes WHO works WITH WHOM (co-authorship networks)
+- **Cross-Domain Analysis**: Analyzes WHO works ACROSS multiple domains individually (interdisciplinary expertise)
+
+**Test Query 1**: "Which authors work across Machine Learning and Signal Processing?"
+
+- **Expected behavior**: Identify interdisciplinary researchers who publish in both domains
+- **Parameters**: `{"domains": ["Machine Learning", "Signal Processing"]}`
 
 **Test Query 2**: "Who are the researchers bridging Image Processing and Biomolecules?"
 
 - **Expected behavior**: Find interdisciplinary work between these fields
 - **Parameters**: `{"domains": ["Image and Video Processing", "Biomolecules"]}`
+
+**Test Query 3**: "Find authors who work in both Computer Vision and Natural Language Processing"
+
+- **Expected behavior**: Identify researchers with expertise spanning both fields
+- **Parameters**: `{"domains": ["Computer Vision", "Natural Language Processing"]}`
 
 ### 6. Paper Impact Queries (NOT DONE)
 
@@ -133,7 +147,7 @@ This document contains test queries for each supported query type in the TechAut
 - **Expected behavior**: Identify high-impact recent CV papers
 - **Parameters**: `{"domain": "Computer Vision", "time_range": "2023-2024"}`
 
-### 7. Author Productivity Queries
+### 7. Author Productivity Queries (NOT CHECK)
 
 **Description**: Evaluate researcher productivity through publication frequency analysis, output consistency patterns, research velocity trends, and publication rate changes over time across different academic domains and career stages
 

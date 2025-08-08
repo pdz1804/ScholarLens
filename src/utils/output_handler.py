@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
-from .logger import setup_logger
+from .logger import get_logger
 
 
 def save_results_json(results: List[object], output_file: str, logger) -> None:
