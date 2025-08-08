@@ -1,0 +1,191 @@
+# System Configuration
+system:
+  name: "TechAuthor"
+  version: "1.0.0"
+  debug: false
+  log_level: "INFO"
+  max_workers: 4
+
+# Data Configuration
+data:
+  # Author parsing configuration
+  parsing:
+    method: "regex"  # Options: "regex", "llm"
+    llm_fallback: false  # If regex fails, fallback to LLM
+  
+  datasets:
+    arxiv_cs:
+      files:
+        - path: "./data/arxiv_cs_2021.csv"
+          year: 2021
+        - path: "./data/arxiv_cs_2022.csv"
+          year: 2022
+        - path: "./data/arxiv_cs_2023.csv"
+          year: 2023
+        - path: "./data/arxiv_cs_2024.csv"
+          year: 2024
+        - path: "./data/arxiv_cs_2025.csv"
+          year: 2025
+      columns:
+        title: "Paper Title"
+        paper_id: "Paper ID"
+        authors: "Authors"
+        abstract: "Abstract"
+        domain: "Domain"
+        primary_subject: "Primary Subject"
+        subjects: "Subjects"
+        date: "Date Submitted"
+        abstract_url: "Abstract URL"
+        pdf_url: "PDF URL"
+  
+  processed_data_path: "./data/processed/"
+  embeddings_cache_path: "./data/embeddings/"
+
+# Embedding Configuration
+embeddings:
+  model_name: "all-MiniLM-L6-v2"
+  dimension: 384
+  batch_size: 32
+  cache_embeddings: true
+
+# Retrieval Configuration
+retrieval:
+  # K-value settings
+  default_top_k: 10           # Default number of final results returned to user
+  max_top_k: 50              # Maximum allowed k value from CLI
+  initial_top_k: 1000         # Initial retrieval count before filtering
+  final_top_k: 20            # Final results passed to analysis agents
+  rerank_top_k: 20           # Results to consider for reranking
+  
+  # Special settings for trend analysis
+  trends_initial_top_k: 5000  # Much higher retrieval for trend analysis
+  trends_final_top_k: 1000    # More papers for comprehensive trend analysis
+  trends_score_threshold: 0.1 # Much lower threshold for trends (vs 0.5 default)
+  
+  # Similarity threshold settings
+  min_similarity_threshold: 0.7    # Higher threshold for strict filtering
+  score_threshold: 0.5             # Default score threshold for document filtering
+  
+  # Hybrid search settings
+  hybrid_alpha: 0.7                # Weight for dense vs sparse search (0.7 = 70% semantic, 30% keyword)
+  rerank: true                     # Enable result reranking
+  
+  # Search behavior settings
+  enable_score_filtering: true      # Enable filtering by similarity scores
+  normalize_scores: true           # Normalize scores across different search types
+  
+  # Sparse search configuration
+  sparse_search:
+    algorithm: "bm25"               # Options: "tfidf", "bm25"
+    cache_dir: "./data/sparse_index/"  # Directory to save/load sparse indices
+    auto_save: true                 # Automatically save indices after building
+    auto_load: true                 # Automatically load indices if available
+    
+    # TF-IDF configuration
+    tfidf:
+      max_features: 20000           # Maximum number of features
+      stop_words: "english"         # Stop words language
+      ngram_range: [1, 2, 3]        # N-gram range (unigrams and bigrams)
+      min_df: 2                     # Minimum document frequency
+      max_df: 0.8                   # Maximum document frequency ratio
+      index_file: "tfidf_index.pkl" # Index file name
+    
+    # BM25 configuration  
+    bm25:
+      k1: 1.2                       # Term frequency saturation parameter
+      b: 0.75                       # Length normalization parameter
+      variant: "okapi"              # BM25 variant: "okapi", "l", or "plus"
+      index_file: "bm25_index.pkl"  # Index file name
+
+# Agent Configuration
+agents:
+  query_classifier:
+    model: "gpt-4o-mini"
+    temperature: 0.1
+    max_tokens: 500
+  
+  retrieval_agent:
+    search_strategies: ["semantic", "keyword", "hybrid"]
+    default_strategy: "hybrid"
+  
+  analysis_agent:
+    model: "gpt-4o-mini"
+    temperature: 0.2
+    max_tokens: 1000
+    statistical_methods: ["frequency", "co_occurrence", "temporal"]
+  
+  synthesis_agent:
+    model: "gpt-4o-mini"
+    temperature: 0.3
+    max_tokens: 1500
+  
+  validation_agent:
+    model: "gpt-4o-mini"
+    temperature: 0.1
+    max_tokens: 500
+    validation_criteria: ["relevance", "accuracy", "completeness"]
+
+# Query Scenarios Configuration
+scenarios:
+  author_expertise:
+    description: "Find top authors in specific domains"
+    required_params: ["domain", "top_k"]
+    optional_params: ["time_range", "min_papers"]
+    
+  technology_trends:
+    description: "Analyze technology trends over time"
+    required_params: ["domain"]
+    optional_params: ["time_range", "granularity"]
+    
+  author_collaboration:
+    description: "Analyze author collaboration patterns"
+    required_params: ["author_name"]
+    optional_params: ["top_k", "time_range"]
+    
+  domain_evolution:
+    description: "Track domain evolution over time"
+    required_params: ["domain"]
+    optional_params: ["time_range", "metrics"]
+    
+  cross_domain_analysis:
+    description: "Find authors working across domains"
+    required_params: ["domains"]
+    optional_params: ["min_papers_per_domain"]
+    
+  paper_impact:
+    description: "Analyze paper impact and influence"
+    required_params: ["domain"]
+    optional_params: ["metric", "time_range"]
+    
+  author_productivity:
+    description: "Analyze author productivity metrics"
+    required_params: ["time_range"]
+    optional_params: ["domain", "top_k"]
+    
+  institutional_analysis:
+    description: "Analyze institutional research patterns"
+    required_params: ["domain"]
+    optional_params: ["top_k", "time_range"]
+
+# API Configuration
+api:
+  host: "localhost"
+  port: 8000
+  workers: 1
+  cors_origins: ["*"]
+  rate_limit: "100/minute"
+
+# Caching Configuration
+cache:
+  enabled: true
+  backend: "memory"  # Options: memory, redis
+  ttl: 3600  # Time to live in seconds
+  max_size: 1000
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "./logs/techauthor.log"
+  max_file_size: "10MB"
+  backup_count: 5

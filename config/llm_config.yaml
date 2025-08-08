@@ -1,0 +1,98 @@
+# LLM Provider Configuration for TechAuthor System
+# Supports OpenAI, Google Gemini, and Ollama providers
+
+# Default provider to use (openai, gemini, ollama)
+default_provider: "openai"
+
+# Provider configurations
+providers:
+  openai:
+    # OpenAI API Configuration
+    api_key_env: "OPENAI_API_KEY"  # Environment variable name
+    base_url: "https://api.openai.com/v1"
+    models:
+      classification: "gpt-4o-mini"      # Fast model for query classification
+      retrieval: "gpt-4o-mini"          # Query enhancement and search
+      analysis: "gpt-4o-mini"                # Advanced analysis tasks
+      synthesis: "gpt-4o-mini"               # Result synthesis
+      validation: "gpt-4o-mini"         # Result validation
+      parsing: "gpt-4o-mini"            # Author/data parsing tasks
+    parameters:
+      temperature: 0.1
+      max_tokens: 2000
+      timeout: 30
+      
+  gemini:
+    # Google Gemini API Configuration
+    api_key_env: "GOOGLE_API_KEY"
+    base_url: "https://generativelanguage.googleapis.com/v1beta"
+    models:
+      classification: "gemini-2.0-flash"    # Fast model for classification
+      retrieval: "gemini-2.0-flash"        # Query enhancement
+      analysis: "gemini-2.0-flash"           # Advanced analysis
+      synthesis: "gemini-2.0-flash"          # Result synthesis
+      validation: "gemini-2.0-flash"       # Validation
+      parsing: "gemini-2.0-flash"          # Author/data parsing tasks
+    parameters:
+      temperature: 0.1
+      max_output_tokens: 2000
+      timeout: 30
+      
+  ollama:
+    # Local Ollama Configuration
+    base_url: "http://localhost:11434"
+    models:
+      classification: "qwen2.5:3b"        # Fast local model
+      retrieval: "qwen2.5:3b"            # Query enhancement
+      analysis: "qwen2.5:3b"             # Advanced analysis
+      synthesis: "qwen2.5:3b"            # Result synthesis
+      validation: "qwen2.5:3b"           # Validation
+      parsing: "qwen2.5:3b"              # Author/data parsing tasks
+    parameters:
+      temperature: 0.1
+      num_predict: 2000
+      timeout: 60
+
+# Retrieval Configuration
+retrieval:
+  # Increase top_k for initial retrieval
+  initial_top_k: 200                    # Retrieve more documents initially
+  score_threshold: 0.4                  # Filter results below this score
+  final_top_k: 20                       # Final number of results to return
+  
+  # Hybrid search parameters
+  hybrid_alpha: 0.7                     # Weight for dense search (0.0-1.0)
+  
+  # Search method preferences
+  enable_sparse_search: true            # TF-IDF keyword search
+  enable_dense_search: true             # Semantic embedding search
+  enable_reranking: true                # Re-rank results after fusion
+
+# Agent-specific configurations
+agents:
+  query_classifier:
+    provider: "default"                 # Use default provider or override
+    model: "default"                    # Use default model or override
+    
+  retrieval_agent:
+    provider: "default"
+    model: "default"
+    
+  analysis_agent:
+    provider: "default"
+    model: "default"
+    
+  synthesis_agent:
+    provider: "default"
+    model: "default"
+    
+  validation_agent:
+    provider: "default"
+    model: "default"
+
+# Logging configuration
+logging:
+  use_special_characters: false         # Disable ✓, ✗, and other special chars
+  detailed_retrieval_logs: true         # Log detailed retrieval information
+  show_paper_details: true              # Show paper titles and scores
+  performance_metrics: true             # Log timing information
