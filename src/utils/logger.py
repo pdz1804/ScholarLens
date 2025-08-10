@@ -40,7 +40,9 @@ def setup_logger(
     logger = logging.getLogger("TechAuthor")
     
     # Only configure if not already configured OR if we need to add file logging
-    needs_configuration = not _is_configured or (log_file and not any(isinstance(h, RotatingFileHandler) for h in logger.handlers))
+    not_configured = not _is_configured
+    file_logging_needed = log_file and not any(isinstance(h, RotatingFileHandler) for h in logger.handlers)
+    needs_configuration = not_configured or file_logging_needed
     
     if not needs_configuration and _global_logger:
         return _global_logger

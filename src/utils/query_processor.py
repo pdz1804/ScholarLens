@@ -223,7 +223,7 @@ def print_query_response(response, format_type: str = "text", logger=None) -> No
                         log_or_print(f"  {i:2d}. {author_name}", logger)
                         log_or_print(f"      Papers: {paper_count}, Expertise Score: {expertise_score:.1f}", logger)
                         if subjects:
-                            log_or_print(f"      Research Areas: {', '.join(subjects[:3])}", logger)
+                            log_or_print(f"      Research Areas: {', '.join(subjects)}", logger)
                         
                         # Display the papers this author contributed to
                         if papers:
@@ -492,7 +492,7 @@ def print_query_response(response, format_type: str = "text", logger=None) -> No
                             log_or_print(f"      Collaborations: {count}, Shared Papers: {papers}", logger)
                             log_or_print(f"      Network Centrality: {centrality:.3f}", logger)
                             if subjects:
-                                log_or_print(f"      Common Research Areas: {', '.join(subjects[:3])}", logger)
+                                log_or_print(f"      Common Research Areas: {', '.join(subjects)}", logger)
                             log_or_print("", logger)
                 else:
                     log_or_print("No collaborators found in the retrieved papers.", logger)
@@ -703,7 +703,7 @@ def print_query_response(response, format_type: str = "text", logger=None) -> No
                                     # Show common subjects/domains if available
                                     common_subjects = collab.get('common_subjects', [])
                                     if common_subjects and isinstance(common_subjects, list):
-                                        log_or_print(f"     • Common Research Areas: {', '.join(common_subjects[:3])}", logger)
+                                        log_or_print(f"     • Common Research Areas: {', '.join(common_subjects)}", logger)
                                         if len(common_subjects) > 3:
                                             log_or_print(f"       (and {len(common_subjects) - 3} more areas)", logger)
                                     

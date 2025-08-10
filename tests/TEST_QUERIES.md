@@ -87,7 +87,7 @@ This document contains test queries for each supported query type in the TechAut
 **Test Query 2**: "What are the collaboration patterns in Quantum Computing research?"
 
 - **Expected behavior**: Identify collaboration networks in quantum computing domain
-- **Parameters**: `{"domain": "quantum", "collaboration_depth": 2}`
+- **Parameters**: `{"domain": "quantum"}`
 
 ### 4. Domain Evolution Queries
 
@@ -107,7 +107,7 @@ This document contains test queries for each supported query type in the TechAut
 
 **Key Distinction from Technology Trends**: Domain Evolution focuses on *why* and *what* researchers study (conceptual shifts), while Technology Trends focuses on *how* they study it (methodological trends).
 
-### 5. Cross-Domain Analysis Queries 
+### 5. Cross-Domain Analysis Queries (NOT DONE)
 
 **Description**: Identify interdisciplinary researchers who contribute to multiple academic domains, analyze knowledge transfer patterns between fields, and discover researchers bridging different research areas through their diverse publication portfolios. This focuses on individual authors who work ACROSS multiple domains.
 
@@ -147,7 +147,7 @@ This document contains test queries for each supported query type in the TechAut
 - **Expected behavior**: Identify high-impact recent CV papers
 - **Parameters**: `{"domain": "Computer Vision", "time_range": "2023-2024"}`
 
-### 7. Author Productivity Queries (NOT CHECK)
+### 7. Author Productivity Queries (NOT DONE)
 
 **Description**: Evaluate researcher productivity through publication frequency analysis, output consistency patterns, research velocity trends, and publication rate changes over time across different academic domains and career stages
 
